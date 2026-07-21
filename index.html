@@ -102,6 +102,7 @@
   .card:hover{
     transform: translateY(-10px) scale(1.02);
     box-shadow: 0 22px 50px rgba(0,0,0,0.45);
+    border-color: rgba(255,255,255,0.32);
   }
   .card::before{
     content:'';
@@ -146,10 +147,15 @@
   #gameView{
     position:fixed; inset:0; z-index:1000;
     background:#000;
-    display:none;
-    align-items:center; justify-content:center;
+    display:flex; align-items:center; justify-content:center;
+    opacity:0; visibility:hidden; pointer-events:none;
+    transform: scale(0.96);
+    transition: opacity 0.32s ease, transform 0.32s cubic-bezier(.22,1.4,.36,1), visibility 0s linear 0.32s;
   }
-  #gameView.active{ display:flex; }
+  #gameView.active{
+    opacity:1; visibility:visible; pointer-events:auto; transform:scale(1);
+    transition: opacity 0.32s ease, transform 0.32s cubic-bezier(.22,1.4,.36,1), visibility 0s linear 0s;
+  }
   #gameFrame{
     width:100%; height:100%; border:0; display:block;
   }
@@ -565,12 +571,50 @@
     0%{ transform: translateY(0) rotate(0deg); opacity:1; }
     100%{ transform: translateY(110vh) rotate(400deg); opacity:0.2; }
   }
+
+  /* ---- Retro CRT ambient overlay (site-wide atmosphere, free, toggleable) ---- */
+  #crtOverlay{
+    position:fixed; inset:0; z-index:9000; pointer-events:none;
+    background:
+      repeating-linear-gradient(0deg, rgba(0,0,0,0.16) 0px, rgba(0,0,0,0.16) 1px, transparent 2px, transparent 3px),
+      radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(0,0,0,0.35) 100%);
+    opacity:0; transition: opacity 0.4s ease;
+    mix-blend-mode: multiply;
+  }
+  #crtOverlay.on{ opacity:0.55; }
+  #crtOverlay.on::after{
+    content:''; position:absolute; inset:0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0) 40%);
+    animation: crtFlicker 6.5s steps(1) infinite;
+  }
+  @keyframes crtFlicker{
+    0%, 91%, 100%{ opacity:1; }
+    92%{ opacity:0.85; }
+    94%{ opacity:1; }
+    96%{ opacity:0.9; }
+  }
+  #crtToggleBtn.off{ opacity:0.55; }
+
+  /* ---- Small-phone tightening (the site previously had no breakpoints at all) ---- */
+  @media (max-width: 480px){
+    main{ padding: 40px 14px 60px; }
+    header{ margin-bottom: 36px; }
+    h1{ font-size: clamp(26px, 8vw, 38px); margin-bottom:10px; }
+    header p{ font-size:14.5px; }
+    .headerActionBtn{ font-size:11.5px; padding:6px 11px; gap:4px; }
+    .card{ padding:20px; }
+    .cardIcon{ width:48px; height:48px; font-size:22px; margin-bottom:12px; }
+    .cardTitle{ font-size:17px; }
+    .adminPanelBox{ padding:20px 16px; width:92%; }
+    .shopCategoryGrid{ grid-template-columns: repeat(auto-fit, minmax(120px,1fr)); gap:8px; }
+  }
 </style>
 </head>
 <body>
   <div class="blob blob1"></div>
   <div class="blob blob2"></div>
   <div class="blob blob3"></div>
+  <div id="crtOverlay"></div>
 
   <div class="siteAnnounce" id="siteAnnounce"></div>
 
@@ -587,6 +631,7 @@
           <button class="headerActionBtn" id="achievementsBtn">🏆 ההישגים שלי</button>
           <button class="headerActionBtn" id="demoBtn">🎬 הדגמה</button>
           <button class="headerActionBtn" id="dailyChestBtn">🎁 תיבה יומית</button>
+          <button class="headerActionBtn" id="crtToggleBtn" title="הפעל/כבה אפקט מסך רטרו">📺 מסך רטרו</button>
           <button class="headerActionBtn" id="shopBtn" style="background:linear-gradient(135deg,#ffd803,#ff9a3c); color:#1a0b2e; border:none;">🛒 חנות</button>
         </div>
       </header>
@@ -2480,7 +2525,10 @@
   function goHome(refresh){
     gameView.classList.remove('active');
     homeView.style.display = 'block';
-    gameFrame.srcdoc = '';
+    // Clear the iframe after the fade/zoom-out transition finishes (matches the
+    // #gameView CSS transition duration) instead of blanking it instantly,
+    // so the game visibly shrinks away rather than flashing to black first.
+    setTimeout(()=>{ if(!gameView.classList.contains('active')) gameFrame.srcdoc = ''; }, 340);
     try{ sessionStorage.removeItem('arcade_demo_active'); }catch(e){}
     if(location.hash){
       history.pushState({}, '', location.pathname + location.search);
@@ -2533,6 +2581,26 @@
   wireEventControls('qEvent');
   checkSecretReveal();
   checkStreakInsuranceNotice();
+
+  // ---- Retro CRT ambient overlay toggle (free, cosmetic, on by default) ----
+  const CRT_KEY = 'arcade_crt_overlay_on';
+  const crtOverlay = document.getElementById('crtOverlay');
+  const crtToggleBtn = document.getElementById('crtToggleBtn');
+  function isCrtOn(){
+    try{ return localStorage.getItem(CRT_KEY) !== 'false'; }catch(e){ return true; } // default ON
+  }
+  function renderCrtState(){
+    const on = isCrtOn();
+    if(crtOverlay) crtOverlay.classList.toggle('on', on);
+    if(crtToggleBtn) crtToggleBtn.classList.toggle('off', !on);
+  }
+  if(crtToggleBtn){
+    crtToggleBtn.addEventListener('click', ()=>{
+      try{ localStorage.setItem(CRT_KEY, isCrtOn() ? 'false' : 'true'); }catch(e){}
+      renderCrtState();
+    });
+  }
+  renderCrtState();
 
   const dailyChestBtn = document.getElementById('dailyChestBtn');
   if(dailyChestBtn){
