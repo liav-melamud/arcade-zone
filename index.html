@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Arcade Zone - חבילת משחקי דפדפן</title>
 <style>
   *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
@@ -573,13 +573,18 @@
   }
 
   /* ---- Retro CRT ambient overlay (site-wide atmosphere, free, toggleable) ---- */
+  /* NOTE: previously used mix-blend-mode:multiply on a position:fixed layer -
+     iOS/mobile Safari has a long-standing bug where blend modes silently fail
+     to composite on fixed-position elements, making the whole effect invisible
+     on phones. Fixed by dropping the blend mode and using plain alpha layers,
+     which render identically (and correctly) on every browser/device. */
   #crtOverlay{
     position:fixed; inset:0; z-index:9000; pointer-events:none;
     background:
-      repeating-linear-gradient(0deg, rgba(0,0,0,0.16) 0px, rgba(0,0,0,0.16) 1px, transparent 2px, transparent 3px),
-      radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(0,0,0,0.35) 100%);
+      repeating-linear-gradient(0deg, rgba(0,0,0,0.22) 0px, rgba(0,0,0,0.22) 1px, transparent 2px, transparent 3px),
+      radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(0,0,0,0.30) 100%);
     opacity:0; transition: opacity 0.4s ease;
-    mix-blend-mode: multiply;
+    will-change: opacity;
   }
   #crtOverlay.on{ opacity:0.55; }
   #crtOverlay.on::after{
@@ -595,9 +600,32 @@
   }
   #crtToggleBtn.off{ opacity:0.55; }
 
+  /* ---- Touch devices: kill sticky :hover states (a tap on mobile Safari/Chrome
+     otherwise "activates" :hover until the user taps elsewhere, which feels like
+     the site is stuck/unresponsive) and give a real tap-feedback state instead ---- */
+  @media (hover: none), (pointer: coarse){
+    .card:hover{ transform:none; box-shadow:none; border-color: rgba(255,255,255,0.12); }
+    .card:hover::before{ opacity:0; }
+    .card:active{ transform: scale(0.97); transition: transform 0.12s ease; }
+    .headerActionBtn:hover{ background: rgba(255,255,255,0.06); }
+    .headerActionBtn:active{ background: rgba(255,255,255,0.14); }
+    .adminBtnPrimary:hover, .adminBtnGhost:hover{ transform:none; }
+    .adminBtnPrimary:active, .adminBtnGhost:active{ transform: scale(0.96); }
+    .adminPanelXBtn:hover{ transform:none; background: rgba(255,255,255,0.08); }
+  }
+
+  /* ---- General phone/tablet tightening ---- */
+  @media (max-width: 680px){
+    main{ padding: 44px 16px 70px; }
+    .grid{ gap:16px; }
+    .headerBtnsRow{ gap:8px; }
+    .headerActionBtn{ min-height:38px; }
+  }
+
   /* ---- Small-phone tightening (the site previously had no breakpoints at all) ---- */
   @media (max-width: 480px){
-    main{ padding: 40px 14px 60px; }
+    body{ padding-bottom: env(safe-area-inset-bottom, 0px); }
+    main{ padding: 40px 14px calc(60px + env(safe-area-inset-bottom, 0px)); }
     header{ margin-bottom: 36px; }
     h1{ font-size: clamp(26px, 8vw, 38px); margin-bottom:10px; }
     header p{ font-size:14.5px; }
@@ -607,6 +635,13 @@
     .cardTitle{ font-size:17px; }
     .adminPanelBox{ padding:20px 16px; width:92%; }
     .shopCategoryGrid{ grid-template-columns: repeat(auto-fit, minmax(120px,1fr)); gap:8px; }
+    .adminTabBtn{ font-size:11px; padding:6px 10px; }
+    .dcsBox{ padding:14px 15px; }
+  }
+
+  @media (max-width: 480px) and (orientation: landscape){
+    .adminOverlay{ padding: 16px 0; align-items:flex-start; }
+    .adminPanelBox{ max-width:420px; }
   }
 </style>
 </head>
