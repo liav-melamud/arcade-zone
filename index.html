@@ -753,6 +753,53 @@
         <button class="adminBtnPrimary" id="globalLuckEventBtn" style="font-size:13px; padding:8px 14px;">הפעל</button>
       </div>
       <div class="hint" id="globalLuckEventStatus"></div>
+
+      <hr style="border:none; border-top:1px solid rgba(255,255,255,0.14); margin:18px 0;">
+      <p class="hint">🎁 הענקת נקודות בונוס חד-פעמיות לשחקן (אתם). הבונוס יתווסף אוטומטית למשחק הבא שייפתח.</p>
+      <input class="adminInput" id="qBonusInput" type="number" min="1" max="9999" placeholder="50" style="font-size:18px; letter-spacing:1px;">
+      <div class="adminRow">
+        <button class="adminBtnPrimary" id="qBonusGrantBtn">🎁 הענק בונוס</button>
+      </div>
+      <div class="bonusResultMsg" id="qBonusResult">הבונוס נשמר ויוענק במשחק הבא!</div>
+
+      <p class="hint" style="margin-top:14px;">🔥 קביעת רצף ימים ידנית (למשל 30, כדי לפתוח מיד את כל הפרסים). הרצף ימשיך להיספר כרגיל מהיום הזה והלאה.</p>
+      <input class="adminInput" id="qStreakInput" type="number" min="1" max="999" placeholder="30" style="font-size:18px; letter-spacing:1px;">
+      <div class="adminRow">
+        <button class="adminBtnPrimary" id="qStreakSetBtn">🔥 עדכן רצף</button>
+      </div>
+      <div class="bonusResultMsg" id="qStreakResult">הרצף עודכן! העמוד ייטען מחדש...</div>
+
+      <hr style="border:none; border-top:1px solid rgba(255,255,255,0.14); margin:18px 0;">
+      <p class="hint">📊 נתונים שנשמרו בדפדפן זה בלבד.</p>
+      <div class="adminStatsList" id="qStatsList"></div>
+
+      <hr style="border:none; border-top:1px solid rgba(255,255,255,0.14); margin:18px 0;">
+      <p class="hint">💾 גיבוי או שחזור כל הנתונים (שיאים, רצף, הישגים) כקובץ קטן.</p>
+      <div class="adminRow">
+        <button class="adminBtnPrimary" id="qExportBtn">⬇️ ייצוא גיבוי</button>
+        <button class="adminBtnGhost" id="qImportBtn">⬆️ ייבוא גיבוי מקובץ</button>
+      </div>
+      <input type="file" id="qImportFile" accept="application/json">
+      <div class="adminRow">
+        <button class="adminBtnPrimary" id="qWhatsappBtn" style="background:linear-gradient(135deg,#25D366,#128C7E); color:#fff;">📲 שלח גיבוי בוואטסאפ למכשיר אחר</button>
+      </div>
+      <div class="bonusResultMsg" id="qDataResult"></div>
+
+      <div class="adminToggleRow" style="justify-content:flex-start; gap:8px; cursor:pointer;" id="qImportTextToggle">
+        <span style="text-decoration:underline; font-size:12.5px; opacity:0.8;">או הדביקו כאן גיבוי שקיבלתם כטקסט בוואטסאפ ⌄</span>
+      </div>
+      <div id="qImportTextBox" style="display:none;">
+        <textarea class="adminTextarea" id="qImportTextarea" placeholder='הדביקו כאן את הטקסט שקיבלתם (מתחיל ב-{"arcade...)'></textarea>
+        <div class="adminRow">
+          <button class="adminBtnPrimary" id="qImportTextBtn">📋 ייבוא מהטקסט</button>
+        </div>
+      </div>
+
+      <hr style="border:none; border-top:1px solid rgba(255,255,255,0.14); margin:18px 0;">
+      <p class="hint">🗑️ איפוס מלא של כל השיאים, הרצף וההישגים בדפדפן זה. פעולה זו בלתי הפיכה.</p>
+      <div class="adminRow">
+        <button class="adminBtnPrimary dangerBtn" id="qResetBtn">🗑️ איפוס כל הנתונים</button>
+      </div>
     </div>
   </div>
 
@@ -2821,33 +2868,38 @@
     });
   });
 
-  // ---- Bonus points grant ----
+  // ---- Bonus points grant (wired for both the 1234 panel's admin* ids and
+  // the 4321 panel's q* ids, so both admin surfaces share one implementation) ----
   const ADMIN_BONUS_KEY = 'arcade_admin_bonus';
-  const adminBonusInput = document.getElementById('adminBonusInput');
-  const adminBonusGrantBtn = document.getElementById('adminBonusGrantBtn');
-  const adminBonusResult = document.getElementById('adminBonusResult');
-  if(adminBonusGrantBtn){
-    adminBonusGrantBtn.addEventListener('click', ()=>{
-      const amount = parseInt(adminBonusInput.value, 10);
+  function wireBonusGrant(inputId, btnId, resultId){
+    const input = document.getElementById(inputId);
+    const btn = document.getElementById(btnId);
+    const result = document.getElementById(resultId);
+    if(!btn) return;
+    btn.addEventListener('click', ()=>{
+      const amount = parseInt(input.value, 10);
       if(!amount || amount<=0) return;
       try{
         localStorage.setItem(ADMIN_BONUS_KEY, JSON.stringify({amount, id: Date.now()}));
       }catch(e){}
       addCoins(amount);
-      adminBonusResult.textContent = `✅ נשמר! ${amount} נקודות בונוס יתווספו למשחק הבא + ${amount} מטבעות לארנק.`;
-      adminBonusResult.classList.add('show');
-      adminBonusInput.value = '';
-      setTimeout(()=> adminBonusResult.classList.remove('show'), 4000);
+      result.textContent = `✅ נשמר! ${amount} נקודות בונוס יתווספו למשחק הבא + ${amount} מטבעות לארנק.`;
+      result.classList.add('show');
+      input.value = '';
+      setTimeout(()=> result.classList.remove('show'), 4000);
     });
   }
+  wireBonusGrant('adminBonusInput', 'adminBonusGrantBtn', 'adminBonusResult');
+  wireBonusGrant('qBonusInput', 'qBonusGrantBtn', 'qBonusResult');
 
-  // ---- Manual streak set ----
-  const adminStreakInput = document.getElementById('adminStreakInput');
-  const adminStreakSetBtn = document.getElementById('adminStreakSetBtn');
-  const adminStreakResult = document.getElementById('adminStreakResult');
-  if(adminStreakSetBtn){
-    adminStreakSetBtn.addEventListener('click', ()=>{
-      const val = parseInt(adminStreakInput.value, 10);
+  // ---- Manual streak set (same dual-wiring pattern) ----
+  function wireStreakSet(inputId, btnId, resultId){
+    const input = document.getElementById(inputId);
+    const btn = document.getElementById(btnId);
+    const result = document.getElementById(resultId);
+    if(!btn) return;
+    btn.addEventListener('click', ()=>{
+      const val = parseInt(input.value, 10);
       if(!val || val<=0) return;
       try{
         const today = new Date();
@@ -2855,10 +2907,12 @@
         localStorage.setItem(STREAK_KEY, String(val));
         localStorage.setItem(STREAK_DATE_KEY, todayStr);
       }catch(e){}
-      adminStreakResult.classList.add('show');
+      result.classList.add('show');
       setTimeout(()=>{ location.reload(); }, 900);
     });
   }
+  wireStreakSet('adminStreakInput', 'adminStreakSetBtn', 'adminStreakResult');
+  wireStreakSet('qStreakInput', 'qStreakSetBtn', 'qStreakResult');
 
   // Live-sync the announcement across other open tabs/windows of this same file
   window.addEventListener('storage', (e)=>{
@@ -2866,8 +2920,8 @@
   });
 
   // ---- Stats dashboard ----
-  function renderAdminStats(){
-    const list = document.getElementById('adminStatsList');
+  function renderAdminStats(listId){
+    const list = document.getElementById(listId || 'adminStatsList');
     if(!list) return;
     let html = '';
     html += `<div class="row"><span>🔥 רצף יומי נוכחי</span><b>${dailyStreak} ימים</b></div>`;
@@ -2927,139 +2981,153 @@
     }
     return dump;
   }
-  const adminExportBtn = document.getElementById('adminExportBtn');
-  const adminImportBtn = document.getElementById('adminImportBtn');
-  const adminImportFile = document.getElementById('adminImportFile');
-  const adminDataResult = document.getElementById('adminDataResult');
-  const adminResetBtn = document.getElementById('adminResetBtn');
-  const adminWhatsappBtn = document.getElementById('adminWhatsappBtn');
-  if(adminExportBtn){
-    adminExportBtn.addEventListener('click', ()=>{
-      try{
-        const dump = buildBackupDump();
-        const blob = new Blob([JSON.stringify(dump, null, 2)], {type:'application/json'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = 'arcade-zone-backup.json';
-        document.body.appendChild(a); a.click(); a.remove();
-        setTimeout(()=> URL.revokeObjectURL(url), 2000);
-        adminDataResult.textContent = '✅ הגיבוי הורד בהצלחה!';
-        adminDataResult.classList.add('show');
-        setTimeout(()=> adminDataResult.classList.remove('show'), 4000);
-      }catch(e){}
-    });
-  }
-  if(adminWhatsappBtn){
-    adminWhatsappBtn.addEventListener('click', async ()=>{
-      const dump = buildBackupDump();
-      const json = JSON.stringify(dump);
-      const fileName = 'arcade-zone-backup.json';
-      let sharedViaFile = false;
-      try{
-        const file = new File([JSON.stringify(dump, null, 2)], fileName, {type:'application/json'});
-        if(navigator.canShare && navigator.canShare({files:[file]})){
-          await navigator.share({
-            files: [file],
-            title: 'Arcade Zone - גיבוי נתונים',
-            text: 'קובץ גיבוי ההתקדמות שלי ב-Arcade Zone. פתחו בפאנל הניהול -> נתונים -> ייבוא גיבוי במכשיר היעד.'
-          });
-          sharedViaFile = true;
-        }
-      }catch(e){ /* user cancelled the share sheet, or unsupported - fall through, no file was downloaded */ }
+  const ADMIN_CONFIG_KEYS = ['arcade_admin_message','arcade_admin_active','arcade_admin_bonus','arcade_admin_bonus_claimed_id','arcade_autopilot'];
 
-      if(!sharedViaFile){
-        // No file download here on purpose (was getting flagged/intercepted by antivirus/browser warnings).
-        // Instead: send the backup as plain text, either embedded straight into the WhatsApp message
-        // (if short enough) or copied to clipboard for the user to paste.
-        const prefix = 'גיבוי Arcade Zone שלי - הדביקו במכשיר היעד בפאנל ניהול -> נתונים -> "ייבוא מהטקסט":\n\n';
-        const fullText = prefix + json;
-        if(fullText.length < 1500){
-          window.open('https://wa.me/?text=' + encodeURIComponent(fullText), '_blank');
-          adminDataResult.textContent = '✅ נפתח וואטסאפ עם הגיבוי בהודעה - רק לשלוח!';
-        } else {
-          try{ if(navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(json); }catch(e){}
-          window.open('https://wa.me/?text=' + encodeURIComponent(prefix + '(הגיבוי הועתק ללוח - הדביקו אותו כאן לפני השליחה)'), '_blank');
-          adminDataResult.textContent = '📋 הגיבוי הועתק ללוח - הדביקו אותו בהודעת הוואטסאפ שנפתחה';
-        }
-        adminDataResult.classList.add('show');
-        setTimeout(()=> adminDataResult.classList.remove('show'), 6000);
-      } else {
-        adminDataResult.textContent = '✅ נשלח!';
-        adminDataResult.classList.add('show');
-        setTimeout(()=> adminDataResult.classList.remove('show'), 3000);
-      }
-    });
-  }
+  // Generalized data-tools wiring, shared by both the 1234 panel (admin* ids)
+  // and the 4321 panel (q* ids) so export/import/WhatsApp-share/reset behave
+  // identically no matter which panel they're triggered from.
+  function wireDataTools(ids){
+    const exportBtn = document.getElementById(ids.exportBtn);
+    const importBtn = document.getElementById(ids.importBtn);
+    const importFile = document.getElementById(ids.importFile);
+    const dataResult = document.getElementById(ids.dataResult);
+    const resetBtn = document.getElementById(ids.resetBtn);
+    const whatsappBtn = document.getElementById(ids.whatsappBtn);
+    const importTextToggle = document.getElementById(ids.importTextToggle);
+    const importTextBox = document.getElementById(ids.importTextBox);
+    const importTextarea = document.getElementById(ids.importTextarea);
+    const importTextBtn = document.getElementById(ids.importTextBtn);
 
-  // ---- Import from pasted text (WhatsApp-friendly, no file needed) ----
-  const importTextToggle = document.getElementById('importTextToggle');
-  const importTextBox = document.getElementById('importTextBox');
-  const adminImportTextarea = document.getElementById('adminImportTextarea');
-  const adminImportTextBtn = document.getElementById('adminImportTextBtn');
-  if(importTextToggle && importTextBox){
-    importTextToggle.addEventListener('click', ()=>{
-      importTextBox.style.display = importTextBox.style.display==='none' ? 'block' : 'none';
-    });
-  }
-  if(adminImportTextBtn){
-    adminImportTextBtn.addEventListener('click', ()=>{
-      const raw = adminImportTextarea.value || '';
-      const jsonStart = raw.indexOf('{');
-      const jsonText = jsonStart >= 0 ? raw.slice(jsonStart) : raw;
-      try{
-        const data = JSON.parse(jsonText);
-        Object.keys(data).forEach(k=>{
-          if(isArcadeKey(k)) localStorage.setItem(k, data[k]);
-        });
-        adminDataResult.textContent = '✅ הנתונים שוחזרו! טוען מחדש...';
-        adminDataResult.classList.add('show');
-        setTimeout(()=> location.reload(), 1200);
-      }catch(e){
-        adminDataResult.textContent = '⚠️ לא הצלחתי לקרוא את הטקסט שהודבק';
-        adminDataResult.classList.add('show');
-        setTimeout(()=> adminDataResult.classList.remove('show'), 3000);
-      }
-    });
-  }
-  if(adminImportBtn && adminImportFile){
-    adminImportBtn.addEventListener('click', ()=> adminImportFile.click());
-    adminImportFile.addEventListener('change', ()=>{
-      const file = adminImportFile.files && adminImportFile.files[0];
-      if(!file) return;
-      const reader = new FileReader();
-      reader.onload = ()=>{
+    if(exportBtn){
+      exportBtn.addEventListener('click', ()=>{
         try{
-          const data = JSON.parse(reader.result);
+          const dump = buildBackupDump();
+          const blob = new Blob([JSON.stringify(dump, null, 2)], {type:'application/json'});
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = 'arcade-zone-backup.json';
+          document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(()=> URL.revokeObjectURL(url), 2000);
+          dataResult.textContent = '✅ הגיבוי הורד בהצלחה!';
+          dataResult.classList.add('show');
+          setTimeout(()=> dataResult.classList.remove('show'), 4000);
+        }catch(e){}
+      });
+    }
+    if(whatsappBtn){
+      whatsappBtn.addEventListener('click', async ()=>{
+        const dump = buildBackupDump();
+        const json = JSON.stringify(dump);
+        const fileName = 'arcade-zone-backup.json';
+        let sharedViaFile = false;
+        try{
+          const file = new File([JSON.stringify(dump, null, 2)], fileName, {type:'application/json'});
+          if(navigator.canShare && navigator.canShare({files:[file]})){
+            await navigator.share({
+              files: [file],
+              title: 'Arcade Zone - גיבוי נתונים',
+              text: 'קובץ גיבוי ההתקדמות שלי ב-Arcade Zone. פתחו בפאנל הניהול -> נתונים -> ייבוא גיבוי במכשיר היעד.'
+            });
+            sharedViaFile = true;
+          }
+        }catch(e){ /* user cancelled the share sheet, or unsupported - fall through, no file was downloaded */ }
+
+        if(!sharedViaFile){
+          const prefix = 'גיבוי Arcade Zone שלי - הדביקו במכשיר היעד בפאנל ניהול -> נתונים -> "ייבוא מהטקסט":\n\n';
+          const fullText = prefix + json;
+          if(fullText.length < 1500){
+            window.open('https://wa.me/?text=' + encodeURIComponent(fullText), '_blank');
+            dataResult.textContent = '✅ נפתח וואטסאפ עם הגיבוי בהודעה - רק לשלוח!';
+          } else {
+            try{ if(navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(json); }catch(e){}
+            window.open('https://wa.me/?text=' + encodeURIComponent(prefix + '(הגיבוי הועתק ללוח - הדביקו אותו כאן לפני השליחה)'), '_blank');
+            dataResult.textContent = '📋 הגיבוי הועתק ללוח - הדביקו אותו בהודעת הוואטסאפ שנפתחה';
+          }
+          dataResult.classList.add('show');
+          setTimeout(()=> dataResult.classList.remove('show'), 6000);
+        } else {
+          dataResult.textContent = '✅ נשלח!';
+          dataResult.classList.add('show');
+          setTimeout(()=> dataResult.classList.remove('show'), 3000);
+        }
+      });
+    }
+    if(importTextToggle && importTextBox){
+      importTextToggle.addEventListener('click', ()=>{
+        importTextBox.style.display = importTextBox.style.display==='none' ? 'block' : 'none';
+      });
+    }
+    if(importTextBtn){
+      importTextBtn.addEventListener('click', ()=>{
+        const raw = importTextarea.value || '';
+        const jsonStart = raw.indexOf('{');
+        const jsonText = jsonStart >= 0 ? raw.slice(jsonStart) : raw;
+        try{
+          const data = JSON.parse(jsonText);
           Object.keys(data).forEach(k=>{
             if(isArcadeKey(k)) localStorage.setItem(k, data[k]);
           });
-          adminDataResult.textContent = '✅ הנתונים שוחזרו! טוען מחדש...';
-          adminDataResult.classList.add('show');
+          dataResult.textContent = '✅ הנתונים שוחזרו! טוען מחדש...';
+          dataResult.classList.add('show');
           setTimeout(()=> location.reload(), 1200);
         }catch(e){
-          adminDataResult.textContent = '⚠️ קובץ לא תקין';
-          adminDataResult.classList.add('show');
-          setTimeout(()=> adminDataResult.classList.remove('show'), 3000);
+          dataResult.textContent = '⚠️ לא הצלחתי לקרוא את הטקסט שהודבק';
+          dataResult.classList.add('show');
+          setTimeout(()=> dataResult.classList.remove('show'), 3000);
         }
-      };
-      reader.readAsText(file);
-    });
+      });
+    }
+    if(importBtn && importFile){
+      importBtn.addEventListener('click', ()=> importFile.click());
+      importFile.addEventListener('change', ()=>{
+        const file = importFile.files && importFile.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = ()=>{
+          try{
+            const data = JSON.parse(reader.result);
+            Object.keys(data).forEach(k=>{
+              if(isArcadeKey(k)) localStorage.setItem(k, data[k]);
+            });
+            dataResult.textContent = '✅ הנתונים שוחזרו! טוען מחדש...';
+            dataResult.classList.add('show');
+            setTimeout(()=> location.reload(), 1200);
+          }catch(e){
+            dataResult.textContent = '⚠️ קובץ לא תקין';
+            dataResult.classList.add('show');
+            setTimeout(()=> dataResult.classList.remove('show'), 3000);
+          }
+        };
+        reader.readAsText(file);
+      });
+    }
+    if(resetBtn){
+      resetBtn.addEventListener('click', ()=>{
+        if(!confirm('לאפס את כל השיאים, הרצף וההישגים? הפעולה בלתי הפיכה. (הגדרות האדמין - הודעה, בונוסים, אוטופיילוט - יישארו כפי שהן)')) return;
+        try{
+          const toRemove = [];
+          for(let i=0;i<localStorage.length;i++){
+            const k = localStorage.key(i);
+            if(isArcadeKey(k) && ADMIN_CONFIG_KEYS.indexOf(k)===-1) toRemove.push(k);
+          }
+          toRemove.forEach(k=> localStorage.removeItem(k));
+        }catch(e){}
+        location.reload();
+      });
+    }
   }
-  const ADMIN_CONFIG_KEYS = ['arcade_admin_message','arcade_admin_active','arcade_admin_bonus','arcade_admin_bonus_claimed_id','arcade_autopilot'];
-  if(adminResetBtn){
-    adminResetBtn.addEventListener('click', ()=>{
-      if(!confirm('לאפס את כל השיאים, הרצף וההישגים? הפעולה בלתי הפיכה. (הגדרות האדמין - הודעה, בונוסים, אוטופיילוט - יישארו כפי שהן)')) return;
-      try{
-        const toRemove = [];
-        for(let i=0;i<localStorage.length;i++){
-          const k = localStorage.key(i);
-          if(isArcadeKey(k) && ADMIN_CONFIG_KEYS.indexOf(k)===-1) toRemove.push(k);
-        }
-        toRemove.forEach(k=> localStorage.removeItem(k));
-      }catch(e){}
-      location.reload();
-    });
-  }
+  wireDataTools({
+    exportBtn:'adminExportBtn', importBtn:'adminImportBtn', importFile:'adminImportFile',
+    dataResult:'adminDataResult', resetBtn:'adminResetBtn', whatsappBtn:'adminWhatsappBtn',
+    importTextToggle:'importTextToggle', importTextBox:'importTextBox',
+    importTextarea:'adminImportTextarea', importTextBtn:'adminImportTextBtn'
+  });
+  wireDataTools({
+    exportBtn:'qExportBtn', importBtn:'qImportBtn', importFile:'qImportFile',
+    dataResult:'qDataResult', resetBtn:'qResetBtn', whatsappBtn:'qWhatsappBtn',
+    importTextToggle:'qImportTextToggle', importTextBox:'qImportTextBox',
+    importTextarea:'qImportTextarea', importTextBtn:'qImportTextBtn'
+  });
 
   adminBtn.addEventListener('click', ()=>{
     if(adminUnlocked){ openAdminPanel(); } else { openPinModal(); }
@@ -3085,6 +3153,7 @@
     if(EVENT_CONTROL_REFRESHERS['qEvent']) EVENT_CONTROL_REFRESHERS['qEvent']();
     renderAdminAutopilot('qAdminAutoList');
     renderGlobalEventStatuses();
+    renderAdminStats('qStatsList');
     overlay.classList.add('show');
   }
   function formatRemaining(ms){
