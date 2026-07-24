@@ -660,10 +660,12 @@
         <div class="profileAvatarWrap"><div class="profileAvatar" id="profileAvatar"><span id="profileAvatarIcon">🎮</span><span class="profileDecoration" id="profileDecoration"></span></div></div>
         <span class="streakBadge" id="streakBadge">🔥 רצף יומי: 1 יום</span>
         <span class="streakBadge" id="coinBalance" style="cursor:pointer;" title="פתיחת החנות">🪙 0 מטבעות</span>
+        <span class="streakBadge" id="levelBadge" style="cursor:pointer;" title="פתיחת ההתקדמות שלי">⭐ רמה 1</span>
         <h1>משחקי דפדפן ממכרים</h1>
         <p>12 משחקים קלאסיים בעיצוב מודרני, הכל בכתובת אחת. הניקוד והשיאים שלכם נשמרים אוטומטית בדפדפן — בחרו משחק והתחילו לשחק!</p>
         <div class="headerBtnsRow">
           <button class="headerActionBtn" id="achievementsBtn">🏆 ההישגים שלי</button>
+          <button class="headerActionBtn" id="progressBtn">📈 ההתקדמות שלי</button>
           <button class="headerActionBtn" id="demoBtn">🎬 הדגמה</button>
           <button class="headerActionBtn" id="dailyChestBtn">🎁 תיבה יומית</button>
           <button class="headerActionBtn" id="crtToggleBtn" title="הפעל/כבה אפקט מסך רטרו">📺 מסך רטרו</button>
@@ -929,6 +931,20 @@
     </div>
   </div>
 
+  <div class="adminOverlay" id="progressOverlay">
+    <div class="adminPanelBox" style="max-width:480px; text-align:center;">
+      <h3>📈 ההתקדמות שלי</h3>
+      <p class="hint">כל מטבע שאתם מרוויחים במשחקים גם מקדם אתכם ברמות - אין תקרה, תמיד יש עוד רמה לכבוש!</p>
+      <div class="dcsBox" id="levelProgressBox"></div>
+      <hr style="border:none; border-top:1px solid rgba(255,255,255,0.14); margin:18px 0;">
+      <p class="hint" style="margin-bottom:10px;">🗓️ משימות שבועיות - נוספות לאתגר היומי, מתחדשות כל שבוע.</p>
+      <div id="weeklyQuestSystemCard"></div>
+      <div class="adminRow" style="margin-top:14px; justify-content:center;">
+        <button class="adminBtnGhost" id="progressCloseBtn">סגור</button>
+      </div>
+    </div>
+  </div>
+
   <div class="adminOverlay" id="whatsNewOverlay">
     <div class="adminPanelBox">
       <h3>✨ מה חדש</h3>
@@ -1168,6 +1184,8 @@
     const finalAmount = Math.round(n * getCoinMultiplier());
     try{ localStorage.setItem(COINS_KEY, String(getCoins()+finalAmount)); }catch(e){}
     renderCoinBalance();
+    addXP(finalAmount);
+    if(window.WeeklyQuestSystem) window.WeeklyQuestSystem.updateProgress('coinsWeek', finalAmount);
   }
   function spendCoins(n){
     const balance = getCoins();
@@ -1179,6 +1197,61 @@
   function renderCoinBalance(){
     const el = document.getElementById('coinBalance');
     if(el) el.textContent = `${getCoinIcon()} ${getCoins()} מטבעות`;
+  }
+
+  // ---------- Player Level & XP (lifetime, never resets - so there's always
+  // another level to chase, even after the shop/achievements run dry) ----------
+  // XP mirrors lifetime coins earned from every source (games, chest, daily
+  // challenge, weekly quests, admin bonuses...) since addCoins() is the one
+  // chokepoint all coin income already funnels through.
+  const XP_KEY = 'arcade_xp_total';
+  function getXP(){ try{ return parseInt(localStorage.getItem(XP_KEY)||'0',10) || 0; }catch(e){ return 0; } }
+  function xpForLevel(n){ return 50 * n * n; } // total XP needed to REACH level n (level 1 = 0 xp)
+  function levelFromXP(xp){
+    let lvl = 1;
+    while(xpForLevel(lvl+1) <= xp && lvl < 999) lvl++;
+    return lvl;
+  }
+  function xpProgressInLevel(xp){
+    const lvl = levelFromXP(xp);
+    const from = xpForLevel(lvl);
+    const to = xpForLevel(lvl+1);
+    return { level: lvl, from, to, current: xp-from, needed: to-from };
+  }
+  function renderLevelBadge(){
+    const el = document.getElementById('levelBadge');
+    if(el) el.textContent = `⭐ רמה ${levelFromXP(getXP())}`;
+  }
+  function showLevelUpToast(newLevel, bonus){
+    const note = document.createElement('div');
+    note.className = 'streakInsuranceNotice';
+    note.textContent = `🎉 עליתם לרמה ${newLevel}! +${bonus} מטבעות בונוס`;
+    document.body.appendChild(note);
+    setTimeout(()=> note.classList.add('show'), 100);
+    setTimeout(()=>{ note.classList.remove('show'); setTimeout(()=>{ if(note.parentNode) note.parentNode.removeChild(note); }, 400); }, 4000);
+  }
+  function addXP(n){
+    if(!n || n<=0) return;
+    const before = getXP();
+    const beforeLevel = levelFromXP(before);
+    const after = before + n;
+    try{ localStorage.setItem(XP_KEY, String(after)); }catch(e){}
+    renderLevelBadge();
+    const afterLevel = levelFromXP(after);
+    if(afterLevel > beforeLevel){
+      // Level-up bonus coins are credited directly (not via addCoins) to
+      // avoid re-triggering this same level-up check recursively; the bonus
+      // still counts toward XP so future levels build on top of it too.
+      const bonus = afterLevel * 5;
+      try{
+        localStorage.setItem(XP_KEY, String(getXP()+bonus));
+        localStorage.setItem(COINS_KEY, String(getCoins()+bonus));
+      }catch(e){}
+      renderCoinBalance();
+      renderLevelBadge();
+      showLevelUpToast(afterLevel, bonus);
+      if(window.WeeklyQuestSystem) window.WeeklyQuestSystem.updateProgress('levelUpsWeek', 1);
+    }
   }
 
   // ==========================================================================
@@ -1384,6 +1457,192 @@
     };
   })();
 
+  // ==========================================================================
+  // Weekly Quest System — a longer-horizon companion to the Daily Challenge:
+  // 3 quests active per calendar week (rotating deterministically, no server
+  // needed), each claimable independently. Deliberately built only on metrics
+  // the SHELL already observes directly (games opened, coins earned, chests
+  // opened, autopilot runtime, level-ups) so it needs zero per-game edits -
+  // every one of the 12 games benefits automatically.
+  // ==========================================================================
+  window.WeeklyQuestSystem = (function(){
+    const COINS_KEY_WQS = 'arcade_coins';
+    const P = 'arcade_weekly_quest_';
+    const WEEK_KEY = P+'week';
+    const INDICES_KEY = P+'indices';
+    const PROGRESS_KEY = P+'progress';
+    const CLAIMED_KEY = P+'claimed';
+    const PLAYED_KEY = P+'played_games';
+    const LIFETIME_CLAIMED_KEY = P+'lifetime_claimed_count';
+
+    const QUESTS = [
+      { id:'games5',      metric:'distinctGamesWeek',   icon:'🎮', title:'שחקו 5 משחקים שונים השבוע',                    target:5,   unit:'משחקים', reward:60 },
+      { id:'coins300',    metric:'coinsWeek',           icon:'🪙', title:'צברו 300 מטבעות השבוע',                         target:300, unit:'מטבעות', reward:70 },
+      { id:'chests5',     metric:'chestOpensWeek',      icon:'🎁', title:'פתחו את התיבה היומית 5 פעמים השבוע',           target:5,   unit:'תיבות',  reward:50 },
+      { id:'autopilot15', metric:'autopilotSecondsWeek',icon:'🤖', title:'הפעילו אוטופיילוט 15 דקות מצטברות השבוע',      target:900, unit:'שניות',  reward:40 },
+      { id:'levelup1',    metric:'levelUpsWeek',        icon:'⭐', title:'עלו לפחות רמה אחת השבוע',                       target:1,   unit:'רמות',   reward:50 }
+    ];
+
+    function weekIndex(){ return Math.floor(Date.now()/(7*86400000)); }
+    function seededRandom(i){
+      const s = Math.sin(i*12.9898 + 78.233)*43758.5453;
+      return s - Math.floor(s);
+    }
+    // Deterministically pick 3 distinct quest indices for a given week number
+    // (same seeded-RNG pattern used for level generation elsewhere on the
+    // site), so it's stable across refreshes and rotates automatically.
+    function pickQuestIndices(week){
+      let remaining = QUESTS.map((_,i)=>i);
+      const picked = [];
+      for(let k=0; k<3 && remaining.length>0; k++){
+        const r = seededRandom(week*7 + k);
+        const idx = Math.floor(r*remaining.length) % remaining.length;
+        picked.push(remaining[idx]);
+        remaining.splice(idx,1);
+      }
+      return picked;
+    }
+
+    function ensureThisWeek(){
+      let stored = null;
+      try{ stored = localStorage.getItem(WEEK_KEY); }catch(e){}
+      const w = String(weekIndex());
+      if(stored !== w){
+        try{
+          localStorage.setItem(WEEK_KEY, w);
+          const indices = pickQuestIndices(weekIndex());
+          localStorage.setItem(INDICES_KEY, JSON.stringify(indices));
+          localStorage.setItem(PROGRESS_KEY, JSON.stringify(indices.map(()=>0)));
+          localStorage.setItem(CLAIMED_KEY, JSON.stringify(indices.map(()=>false)));
+          localStorage.removeItem(PLAYED_KEY);
+        }catch(e){}
+      }
+    }
+
+    function getActiveQuests(){
+      ensureThisWeek();
+      let indices = [];
+      try{ indices = JSON.parse(localStorage.getItem(INDICES_KEY)||'[]'); }catch(e){}
+      return indices.map(i=> QUESTS[i]);
+    }
+    function getProgressArr(){
+      ensureThisWeek();
+      try{ return JSON.parse(localStorage.getItem(PROGRESS_KEY)||'[]'); }catch(e){ return []; }
+    }
+    function getClaimedArr(){
+      ensureThisWeek();
+      try{ return JSON.parse(localStorage.getItem(CLAIMED_KEY)||'[]'); }catch(e){ return []; }
+    }
+    function getLifetimeClaimedCount(){
+      try{ return parseInt(localStorage.getItem(LIFETIME_CLAIMED_KEY)||'0',10) || 0; }catch(e){ return 0; }
+    }
+
+    function updateProgress(metric, value){
+      ensureThisWeek();
+      const quests = getActiveQuests();
+      const progress = getProgressArr();
+      const claimed = getClaimedArr();
+      let changed = false;
+      quests.forEach((q, idx)=>{
+        if(!q || q.metric !== metric) return;
+        if(claimed[idx]) return;
+        const current = progress[idx] || 0;
+        let next = current + (value||0);
+        if(next > q.target) next = q.target;
+        if(next !== current){ progress[idx] = next; changed = true; }
+      });
+      if(changed){
+        try{ localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress)); }catch(e){}
+        renderUI();
+      }
+    }
+
+    // Called by the shell every time ANY game is opened (mirrors
+    // DailyChallengeSystem.recordGamePlayed) - works automatically for all 12
+    // games, no per-game edits needed.
+    function recordGamePlayed(gameId){
+      ensureThisWeek();
+      let played = [];
+      try{ played = JSON.parse(localStorage.getItem(PLAYED_KEY)||'[]'); }catch(e){}
+      if(played.indexOf(gameId) === -1){
+        played.push(gameId);
+        try{ localStorage.setItem(PLAYED_KEY, JSON.stringify(played)); }catch(e){}
+        updateProgress('distinctGamesWeek', 1);
+      }
+    }
+
+    function claimReward(idx){
+      ensureThisWeek();
+      const quests = getActiveQuests();
+      const progress = getProgressArr();
+      const claimed = getClaimedArr();
+      const q = quests[idx];
+      if(!q || claimed[idx]) return false;
+      if((progress[idx]||0) < q.target) return false;
+      claimed[idx] = true;
+      try{
+        localStorage.setItem(CLAIMED_KEY, JSON.stringify(claimed));
+        const balance = parseInt(localStorage.getItem(COINS_KEY_WQS)||'0',10) || 0;
+        localStorage.setItem(COINS_KEY_WQS, String(balance + q.reward));
+        localStorage.setItem(LIFETIME_CLAIMED_KEY, String(getLifetimeClaimedCount()+1));
+      }catch(e){ return false; }
+      if(typeof renderCoinBalance === 'function') renderCoinBalance();
+      if(typeof addXP === 'function') addXP(q.reward);
+      renderUI();
+      return true;
+    }
+
+    function renderUI(containerId){
+      const id = containerId || 'weeklyQuestSystemCard';
+      const el = document.getElementById(id);
+      if(!el) return;
+      ensureThisWeek();
+      const quests = getActiveQuests();
+      const progress = getProgressArr();
+      const claimed = getClaimedArr();
+      el.innerHTML = quests.map((q, idx)=>{
+        const p = progress[idx]||0;
+        const isClaimed = !!claimed[idx];
+        const complete = p >= q.target;
+        const pct = Math.max(0, Math.min(100, Math.round((p/q.target)*100)));
+        let btnClass = '', btnLabel, btnDisabled = true;
+        if(isClaimed){ btnClass='claimed'; btnLabel = '✅ נאסף השבוע'; }
+        else if(complete){ btnClass='ready'; btnLabel = `🎉 אסוף פרס: +${q.reward} 🪙`; btnDisabled = false; }
+        else { btnLabel = '🔒 השלימו כדי לאסוף'; }
+        return `
+          <div class="dcsBox" style="margin-bottom:12px;">
+            <div class="dcsHead">
+              <span class="dcsTitle">🗓️ משימה שבועית</span>
+              <span class="dcsReward">פרס: ${q.reward} 🪙</span>
+            </div>
+            <div class="dcsTask">
+              <div class="dcsIcon">${q.icon}</div>
+              <div class="dcsTaskText">${q.title}</div>
+            </div>
+            <div class="dcsProgressOuter"><div class="dcsProgressInner" style="width:${pct}%"></div></div>
+            <div class="dcsProgressLabel">${Math.min(p,q.target)} / ${q.target} ${q.unit}</div>
+            <button class="dcsClaimBtn ${btnClass}" data-wq-idx="${idx}" ${btnDisabled?'disabled':''}>${btnLabel}</button>
+          </div>
+        `;
+      }).join('');
+      el.querySelectorAll('button[data-wq-idx]').forEach(btn=>{
+        btn.addEventListener('click', ()=> claimReward(parseInt(btn.dataset.wqIdx,10)));
+      });
+    }
+
+    return {
+      QUESTS,
+      updateProgress,
+      recordGamePlayed,
+      claimReward,
+      renderUI,
+      getActiveQuests,
+      getProgressArr,
+      getClaimedArr,
+      getLifetimeClaimedCount
+    };
+  })();
+
   // ---- Risk & chance: Challenge Card (5x next challenge/event reward) ----
   const CHALLENGE_CARD_KEY = 'arcade_challenge_card_active';
   function isChallengeCardActive(){
@@ -1444,9 +1703,10 @@
       a.className = 'card' + (locked ? ' locked' : '');
       a.href = locked ? '#' : '#' + g.id;
       a.style.setProperty('--grad', g.grad);
+      const isGameOfDay = !locked && g.id === gameOfTheDayId();
       const badge = locked
         ? `<div class="lockBadge">🔒 רצף ${g.unlockDays} ימים</div>`
-        : (g.unlockDays ? `<div class="newBadge">🆕 פרס!</div>` : '');
+        : (g.unlockDays ? `<div class="newBadge">🆕 פרס!</div>` : (isGameOfDay ? `<div class="newBadge">🌟 משחק היום</div>` : ''));
       a.innerHTML = `
         ${badge}
         <div class="cardIcon">${g.icon}</div>
@@ -1537,6 +1797,53 @@
     { id:'color_master', icon:'🎯', name:'זיכרון צבעים', test: ()=>{
         const v = getGameScore(games.find(g=>g.id==='color-rush'));
         return v!==null && v>=10;
+      } },
+    { id:'level_5', icon:'⭐', name:'רמה 5', test: ()=> levelFromXP(getXP())>=5 },
+    { id:'level_10', icon:'🌟', name:'רמה 10', test: ()=> levelFromXP(getXP())>=10 },
+    { id:'level_20', icon:'💫', name:'רמה 20 - ותיק הארקייד', test: ()=> levelFromXP(getXP())>=20 },
+    { id:'coins_lifetime_1000', icon:'🪙', name:'אספתם 1000 מטבעות', test: ()=> getXP()>=1000 },
+    { id:'coins_lifetime_5000', icon:'💰', name:'אספתם 5000 מטבעות', test: ()=> getXP()>=5000 },
+    { id:'weekly_quest_1', icon:'🗓️', name:'משימה שבועית ראשונה', test: ()=> !!(window.WeeklyQuestSystem && window.WeeklyQuestSystem.getLifetimeClaimedCount()>=1) },
+    { id:'weekly_quest_10', icon:'📅', name:'10 משימות שבועיות', test: ()=> !!(window.WeeklyQuestSystem && window.WeeklyQuestSystem.getLifetimeClaimedCount()>=10) },
+    { id:'sky_ace', icon:'🐦', name:'טייס Sky Dash', test: ()=>{
+        const v = getGameScore(games.find(g=>g.id==='sky-dash'));
+        return v!==null && v>=20;
+      } },
+    { id:'snake_long', icon:'🐍', name:'נחש ענק', test: ()=>{
+        const v = getGameScore(games.find(g=>g.id==='snake'));
+        return v!==null && v>=40;
+      } },
+    { id:'fusion_1024', icon:'🔢', name:'הגעתם ל-1024', test: ()=>{
+        const v = getGameScore(games.find(g=>g.id==='game-2048'));
+        return v!==null && v>=1024;
+      } },
+    { id:'brick_breaker', icon:'🧱', name:'שובר לבנים', test: ()=>{
+        const v = getGameScore(games.find(g=>g.id==='breakout'));
+        return v!==null && v>=150;
+      } },
+    { id:'whack_champion', icon:'🐹', name:'אלוף ההכאה', test: ()=>{
+        const v = getGameScore(games.find(g=>g.id==='whack-a-mole'));
+        return v!==null && v>=40;
+      } },
+    { id:'slice_master', icon:'🍉', name:'מאסטר החיתוך', test: ()=>{
+        const v = getGameScore(games.find(g=>g.id==='fruit-slice'));
+        return v!==null && v>=80;
+      } },
+    { id:'math_genius', icon:'➕', name:'גאון המתמטיקה', test: ()=>{
+        const v = getGameScore(games.find(g=>g.id==='math-rush'));
+        return v!==null && v>=15;
+      } },
+    { id:'stacker_pro', icon:'🧊', name:'בנאי מקצועי', test: ()=>{
+        const v = getGameScore(games.find(g=>g.id==='block-stack'));
+        return v!==null && v>=20;
+      } },
+    { id:'geo_finisher', icon:'🔺', name:'חצי שלב ב-Geo Dash', test: ()=>{
+        const v = getGameScore(games.find(g=>g.id==='geo-dash'));
+        return v!==null && v>=50;
+      } },
+    { id:'tic_5wins', icon:'❌', name:'5 ניצחונות באיקס עיגול', test: ()=>{
+        const v = getGameScore(games.find(g=>g.id==='tic-tac-toe'));
+        return v!==null && v>=5;
       } },
   ];
   function renderAchievements(){
@@ -1809,6 +2116,7 @@
     if(!state.ready) return false;
     try{ localStorage.setItem(DAILY_CHEST_KEY, String(Date.now())); }catch(e){}
     if(window.DailyChallengeSystem) window.DailyChallengeSystem.updateProgress('chestOpens', 1);
+    if(window.WeeklyQuestSystem) window.WeeklyQuestSystem.updateProgress('chestOpensWeek', 1);
     chaosCrateState = null;
     if(chaosCrateAnimTimer){ clearTimeout(chaosCrateAnimTimer); chaosCrateAnimTimer = null; }
     const overlay = document.getElementById('chaosCrateOverlay');
@@ -1903,6 +2211,30 @@
     try{ return parseInt(localStorage.getItem(TREASURE_KEYS_KEY)||'0',10) || 0; }catch(e){ return 0; }
   }
   // ---- Pending coins earned inside a game (rare items/treasure boxes), picked up on return to home ----
+  // ---------- Game of the Day (variety incentive: a rotating spotlight game
+  // gives a small first-play bonus, nudging players toward games they might
+  // not otherwise revisit instead of settling into one routine) ----------
+  function gameOfTheDayId(){
+    const dayIdx = Math.floor(Date.now()/86400000);
+    // Only rotate among games the player can currently access, so the
+    // spotlight never silently lands on a still-locked bonus game.
+    const unlocked = games.filter(g=> !isGameLocked(g));
+    const pool = unlocked.length ? unlocked : games;
+    return pool[((dayIdx % pool.length)+pool.length)%pool.length].id;
+  }
+  function checkGameOfDayBonus(gameId){
+    if(gameId !== gameOfTheDayId()) return;
+    const today = new Date();
+    const todayStr = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+    const KEY = 'arcade_gameofday_claimed_date';
+    let claimedDate = null;
+    try{ claimedDate = localStorage.getItem(KEY); }catch(e){}
+    if(claimedDate === todayStr) return;
+    try{ localStorage.setItem(KEY, todayStr); }catch(e){}
+    addCoins(15);
+    showQuickNotice('🌟 בונוס משחק היום: +15 מטבעות!');
+  }
+
   function drainPendingGameCoins(){
     try{
       const pending = parseInt(localStorage.getItem('arcade_pending_game_coins')||'0',10) || 0;
@@ -2591,6 +2923,8 @@
     const g = games.find(x=>x.id===id);
     scoreBeforeOpen = g ? getGameScore(g) : null;
     if(window.DailyChallengeSystem) window.DailyChallengeSystem.recordGamePlayed(id);
+    if(window.WeeklyQuestSystem) window.WeeklyQuestSystem.recordGamePlayed(id);
+    checkGameOfDayBonus(id);
     gameFrame.srcdoc = html;
     homeView.style.display = 'none';
     gameView.classList.add('active');
@@ -2658,6 +2992,7 @@
   renderProfileAvatar();
   renderProfileDecoration();
   renderCoinBalance();
+  renderLevelBadge();
   initSparkleTrail();
   renderCards();
   renderPrizes();
@@ -2670,8 +3005,9 @@
   // open, rather than hooking every game file individually.
   setInterval(()=>{
     try{
-      if(sessionStorage.getItem('arcade_demo_active') === 'true' && window.DailyChallengeSystem){
-        window.DailyChallengeSystem.updateProgress('autopilotSeconds', 5);
+      if(sessionStorage.getItem('arcade_demo_active') === 'true'){
+        if(window.DailyChallengeSystem) window.DailyChallengeSystem.updateProgress('autopilotSeconds', 5);
+        if(window.WeeklyQuestSystem) window.WeeklyQuestSystem.updateProgress('autopilotSecondsWeek', 5);
       }
     }catch(e){}
   }, 5000);
@@ -2767,6 +3103,38 @@
 
   const demoBtn = document.getElementById('demoBtn');
   if(demoBtn){ demoBtn.addEventListener('click', startDemo); }
+
+  // ---------- Progress panel (level/XP + weekly quests) ----------
+  function renderLevelProgressBox(){
+    const el = document.getElementById('levelProgressBox');
+    if(!el) return;
+    const xp = getXP();
+    const info = xpProgressInLevel(xp);
+    const pct = info.needed>0 ? Math.max(0, Math.min(100, Math.round((info.current/info.needed)*100))) : 100;
+    el.innerHTML = `
+      <div class="dcsHead">
+        <span class="dcsTitle">⭐ רמה ${info.level}</span>
+        <span class="dcsReward">סה"כ נצברו: ${xp} 🪙</span>
+      </div>
+      <div class="dcsProgressOuter"><div class="dcsProgressInner" style="width:${pct}%"></div></div>
+      <div class="dcsProgressLabel">${info.current} / ${info.needed} עד לרמה ${info.level+1}</div>
+    `;
+  }
+  const progressBtn = document.getElementById('progressBtn');
+  const levelBadgeEl = document.getElementById('levelBadge');
+  const progressOverlay = document.getElementById('progressOverlay');
+  const progressCloseBtn = document.getElementById('progressCloseBtn');
+  function openProgressPanel(){
+    renderLevelProgressBox();
+    if(window.WeeklyQuestSystem) window.WeeklyQuestSystem.renderUI('weeklyQuestSystemCard');
+    if(progressOverlay) progressOverlay.classList.add('show');
+  }
+  if(progressBtn) progressBtn.addEventListener('click', openProgressPanel);
+  if(levelBadgeEl) levelBadgeEl.addEventListener('click', openProgressPanel);
+  if(progressCloseBtn) progressCloseBtn.addEventListener('click', ()=> progressOverlay.classList.remove('show'));
+  if(progressOverlay){
+    progressOverlay.addEventListener('click', (e)=>{ if(e.target===progressOverlay) progressOverlay.classList.remove('show'); });
+  }
 
   const initHash = location.hash.slice(1);
   if(initHash && window.GAMES && window.GAMES[initHash]){
@@ -3260,17 +3628,23 @@
     if(adminPanelOverlay.classList.contains('show')) closeAdminPanel();
     const msgOverlay = document.getElementById('messageDisplayOverlay');
     if(msgOverlay && msgOverlay.classList.contains('show')) msgOverlay.classList.remove('show');
+    const progOverlay = document.getElementById('progressOverlay');
+    if(progOverlay && progOverlay.classList.contains('show')) progOverlay.classList.remove('show');
   });
 
   // ---- What's new ----
-  const WHATS_NEW_VERSION = '2';
+  const WHATS_NEW_VERSION = '3';
   const WHATS_NEW_ITEMS = [
     '🏆 מסך "ההישגים שלי" - תגים שנפתחים אוטומטית לפי השיאים והרצף שלכם, עם שיתוף',
     '🎯 אתגר יומי חדש כל יום עם בונוס נקודות',
     '❌ משחק חדש: איקס עיגול לשני שחקנים',
     '🎬 כפתור הדגמה שמפעיל בוט על משחק רנדומלי',
     '💾 גיבוי ושחזור נתונים בפאנל הניהול',
-    '🔥 קביעת רצף ימים ידנית באדמין'
+    '🔥 קביעת רצף ימים ידנית באדמין',
+    '📈 מערכת רמות חדשה - כל מטבע מקדם אתכם, בלי תקרה',
+    '🗓️ משימות שבועיות - 3 יעדים חדשים כל שבוע, בנוסף לאתגר היומי',
+    '🌟 "משחק היום" - בונוס יומי למשחק ספציפי, כדי לגוון',
+    '🎮 17 הישגים חדשים - שיאים בכל אחד מ-12 המשחקים ועוד'
   ];
   try{
     const seenVersion = localStorage.getItem('arcade_last_seen_version');
