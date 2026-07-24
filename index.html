@@ -330,6 +330,29 @@
 
   #challengeCard{ display:flex; flex-direction:column; gap:12px; max-width:600px; margin: 0 auto 34px; }
 
+  /* Spotify playlists section - official embeds only, loaded lazily per row */
+  .spotifySection{ max-width:640px; margin:0 auto 34px; }
+  .spotifySectionTitle{
+    text-align:center; font-size:24px; margin:0 0 6px; font-weight:900;
+    background:linear-gradient(135deg,#1DB954,#00fff2);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .spotifyRow{
+    background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12);
+    border-radius:16px; margin-bottom:10px; overflow:hidden;
+  }
+  .spotifyRowHead{
+    display:flex; align-items:center; gap:12px; padding:14px 16px; cursor:pointer;
+    transition:background 0.15s;
+  }
+  .spotifyRowHead:hover{ background:rgba(255,255,255,0.05); }
+  .spotifyRowIcon{ font-size:22px; flex-shrink:0; }
+  .spotifyRowName{ font-weight:800; font-size:14px; flex:1; }
+  .spotifyRowToggle{ font-size:12.5px; font-weight:700; color:#1DB954; white-space:nowrap; }
+  .spotifyRowBody{ display:none; padding:0 12px 14px; }
+  .spotifyRowBody.open{ display:block; }
+  .spotifyRowBody iframe{ width:100%; border-radius:12px; border:none; display:block; }
+
   /* Daily Challenge System (separate multi-metric daily challenge, rotates through a pool by date) */
   .dcsCard{ max-width:600px; margin: 0 auto 34px; }
   .dcsBox{
@@ -672,6 +695,12 @@
           <button class="headerActionBtn" id="shopBtn" style="background:linear-gradient(135deg,#ffd803,#ff9a3c); color:#1a0b2e; border:none;">🛒 חנות</button>
         </div>
       </header>
+
+      <div class="spotifySection" id="spotifySection">
+        <h2 class="spotifySectionTitle">🎧 הפלייליסטים שלי בספוטיפיי</h2>
+        <p class="hint" style="text-align:center; margin-bottom:16px;">האזינו חינם, בלי צורך בחשבון - ישירות דרך הנגן הרשמי והמוטמע של ספוטיפיי (לא קובץ מארח באתר).</p>
+        <div id="spotifyPlaylistList"></div>
+      </div>
 
       <div class="challengeCard" id="challengeCard"></div>
 
@@ -1677,6 +1706,63 @@
       localStorage.setItem('arcade_streak_coin_claimed', JSON.stringify(claimed));
     }catch(e){}
   })();
+
+  // ---------- Spotify playlists (official embeds only - never rehosted audio) ----------
+  // These are the site owner's own saved playlists, embedded via Spotify's
+  // official iframe embed (same mechanism as Spotify's own "Share > Embed
+  // playlist" button) so playback is served live from Spotify's own servers,
+  // not hosted on this site. Loaded lazily per row (only when expanded) so
+  // the home page doesn't load 8 iframes on first paint.
+  const MY_SPOTIFY_PLAYLISTS = [
+    { id:'1rAZ8YDzt9WvdujyquRp7r', name:'השירים הכי מקפיצים אבר' },
+    { id:'3u9agYzMoVVDXCKbSYCLc4', name:'שירי שזם מקפיצים' },
+    { id:'31ufF7AXUxK7dEt4WVQW62', name:'שירים מחרפנים' },
+    { id:'2Zqam3QqwU4weu0sQabfBq', name:'שירי יומולדת של משחקים ליומולדת שלי' },
+    { id:'37i9dQZF1EIdg3WwiSKe6g', name:'Party Disco Mix' },
+    { id:'37i9dQZF1EIdJGESPytB8N', name:'130 BPM Mix' },
+    { id:'37i9dQZF1EIV630wDjArgt', name:'P!nk Mix' },
+    { id:'37i9dQZF1EQpj7X7UK8OOF', name:'Rock Mix' }
+  ];
+  function renderSpotifyPlaylists(){
+    const wrap = document.getElementById('spotifyPlaylistList');
+    if(!wrap) return;
+    wrap.innerHTML = MY_SPOTIFY_PLAYLISTS.map((p, idx)=>`
+      <div class="spotifyRow">
+        <div class="spotifyRowHead" data-sp-idx="${idx}">
+          <span class="spotifyRowIcon">🎵</span>
+          <span class="spotifyRowName">${p.name}</span>
+          <span class="spotifyRowToggle" data-sp-toggle="${idx}">▶ נגן</span>
+        </div>
+        <div class="spotifyRowBody" id="spotifyRowBody${idx}"></div>
+      </div>
+    `).join('');
+    wrap.querySelectorAll('[data-sp-idx]').forEach(head=>{
+      head.addEventListener('click', ()=>{
+        const idx = head.dataset.spIdx;
+        const body = document.getElementById('spotifyRowBody'+idx);
+        const toggle = wrap.querySelector(`[data-sp-toggle="${idx}"]`);
+        const isOpen = body.classList.contains('open');
+        if(isOpen){
+          body.classList.remove('open');
+          toggle.textContent = '▶ נגן';
+          return;
+        }
+        if(!body.dataset.loaded){
+          const p = MY_SPOTIFY_PLAYLISTS[idx];
+          const iframe = document.createElement('iframe');
+          iframe.src = `https://open.spotify.com/embed/playlist/${p.id}?utm_source=generator`;
+          iframe.height = '352';
+          iframe.allow = 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture';
+          iframe.loading = 'lazy';
+          body.appendChild(iframe);
+          body.dataset.loaded = 'true';
+        }
+        body.classList.add('open');
+        toggle.textContent = '▲ סגור';
+      });
+    });
+  }
+  renderSpotifyPlaylists();
 
   const grid = document.getElementById('grid');
   const homeView = document.getElementById('homeView');
