@@ -522,6 +522,30 @@
   body[data-theme="cyberpunk"] .blob2{ background:#00fff2; }
   body[data-theme="cyberpunk"] .blob3{ background:#7000ff; }
   body[data-theme="cyberpunk"] h1{ background: linear-gradient(90deg, #ff00c8, #00fff2, #7000ff, #ff00c8); background-size:300% auto; -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; text-shadow: 0 0 18px rgba(0,255,242,0.35); }
+  body[data-theme="galaxy"] .blob1{ background:#5b2c9e; }
+  body[data-theme="galaxy"] .blob2{ background:#2d1b69; }
+  body[data-theme="galaxy"] .blob3{ background:#c56cf0; }
+  body[data-theme="galaxy"] h1{ background: linear-gradient(90deg, #c56cf0, #7f5af0, #2d1b69, #c56cf0); background-size:300% auto; -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+  body[data-theme="candy"] .blob1{ background:#ff8fd0; }
+  body[data-theme="candy"] .blob2{ background:#7ee8fa; }
+  body[data-theme="candy"] .blob3{ background:#ffd6f5; }
+  body[data-theme="candy"] h1{ background: linear-gradient(90deg, #ff8fd0, #7ee8fa, #ffd6f5, #ff8fd0); background-size:300% auto; -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+  body[data-theme="gold"] .blob1{ background:#c9a227; }
+  body[data-theme="gold"] .blob2{ background:#ffd700; }
+  body[data-theme="gold"] .blob3{ background:#8b6f1a; }
+  body[data-theme="gold"] h1{ background: linear-gradient(90deg, #ffd700, #fff3b0, #c9a227, #ffd700); background-size:300% auto; -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; text-shadow: 0 0 16px rgba(255,215,0,0.3); }
+  body[data-theme="lava"] .blob1{ background:#8b0000; }
+  body[data-theme="lava"] .blob2{ background:#ff4500; }
+  body[data-theme="lava"] .blob3{ background:#ffae42; }
+  body[data-theme="lava"] h1{ background: linear-gradient(90deg, #ff4500, #ffae42, #8b0000, #ff4500); background-size:300% auto; -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+  body[data-theme="sakura"] .blob1{ background:#ffb7c5; }
+  body[data-theme="sakura"] .blob2{ background:#f7cad0; }
+  body[data-theme="sakura"] .blob3{ background:#b5838d; }
+  body[data-theme="sakura"] h1{ background: linear-gradient(90deg, #ffb7c5, #f7cad0, #b5838d, #ffb7c5); background-size:300% auto; -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+  body[data-theme="matrix"] .blob1{ background:#0d3b0d; }
+  body[data-theme="matrix"] .blob2{ background:#00ff41; }
+  body[data-theme="matrix"] .blob3{ background:#003b00; }
+  body[data-theme="matrix"] h1{ background: linear-gradient(90deg, #00ff41, #7dffa0, #0d3b0d, #00ff41); background-size:300% auto; -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; text-shadow: 0 0 16px rgba(0,255,65,0.3); }
 
   .specialBadgeTag{
     display:inline-block; margin: 0 0 18px 10px; padding:6px 16px; border-radius:20px;
@@ -544,6 +568,11 @@
   .profileAvatar.frameGold{ border-color:#ffd803; box-shadow:0 0 0 3px rgba(255,216,3,0.35), 0 6px 18px rgba(0,0,0,0.3); }
   .profileAvatar.frameSilver{ border-color:#c7d2e0; box-shadow:0 0 0 3px rgba(199,210,224,0.35), 0 6px 18px rgba(0,0,0,0.3); }
   .profileAvatar.frameRainbow{ border-width:3px; animation: rainbowBorder 3s linear infinite; }
+  .profileAvatar.frameNeon{ border-color:#00fff2; box-shadow:0 0 0 3px rgba(0,255,242,0.3), 0 0 22px rgba(0,255,242,0.55); }
+  .profileAvatar.frameFire{ border-color:#ff5f1f; box-shadow:0 0 0 3px rgba(255,95,31,0.32), 0 0 22px rgba(255,140,26,0.5); }
+  .profileAvatar.frameIce{ border-color:#a5e8ff; box-shadow:0 0 0 3px rgba(165,232,255,0.35), 0 0 20px rgba(120,200,255,0.45); }
+  .profileAvatar.frameEmerald{ border-color:#2cb67d; box-shadow:0 0 0 3px rgba(44,182,125,0.35), 0 0 20px rgba(32,227,178,0.45); }
+  .profileAvatar.frameDiamond{ border-color:#e8f6ff; border-width:3px; box-shadow:0 0 0 3px rgba(232,246,255,0.45), 0 0 26px rgba(190,230,255,0.6); }
   .profileDecoration{
     position:absolute; bottom:-2px; left:-4px; font-size:16px;
     filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
@@ -1181,9 +1210,38 @@
       return streak;
     }catch(e){ return 1; }
   }
-  const dailyStreak = updateDailyStreak();
-  const streakBadgeEl = document.getElementById('streakBadge');
-  if(streakBadgeEl) streakBadgeEl.textContent = `🔥 רצף יומי: ${dailyStreak} ${dailyStreak===1?'יום':'ימים'}`;
+  let dailyStreak = updateDailyStreak();
+
+  // ---- Best-ever streak, so a lost streak can be repaired by a shop item ----
+  // Recorded on every visit BEFORE any purchase can touch it, so the repair
+  // item always has a truthful value to restore rather than an invented one.
+  const STREAK_BEST_KEY = 'arcade_daily_streak_best';
+  function getBestStreak(){
+    try{ return parseInt(localStorage.getItem(STREAK_BEST_KEY)||'0',10) || 0; }catch(e){ return 0; }
+  }
+  (function recordBestStreak(){
+    try{
+      if(dailyStreak > getBestStreak()) localStorage.setItem(STREAK_BEST_KEY, String(dailyStreak));
+    }catch(e){}
+  })();
+  function canRepairStreak(){ return getBestStreak() > dailyStreak; }
+  function repairStreak(){
+    if(!canRepairStreak()) return false;
+    const target = getBestStreak();
+    try{
+      localStorage.setItem(STREAK_KEY, String(target));
+      const today = new Date();
+      const todayStr = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+      localStorage.setItem(STREAK_DATE_KEY, todayStr);
+    }catch(e){}
+    return true;
+  }
+
+  function renderStreakBadge(){
+    const el = document.getElementById('streakBadge');
+    if(el) el.textContent = `🔥 רצף יומי: ${dailyStreak} ${dailyStreak===1?'יום':'ימים'}`;
+  }
+  renderStreakBadge();
 
   // ---------- Coin wallet (persistent currency, separate from per-game scores) ----------
   const COINS_KEY = 'arcade_coins';
@@ -1235,6 +1293,37 @@
   // chokepoint all coin income already funnels through.
   const XP_KEY = 'arcade_xp_total';
   function getXP(){ try{ return parseInt(localStorage.getItem(XP_KEY)||'0',10) || 0; }catch(e){ return 0; } }
+
+  // ---- Permanent shop perks (generic boolean upgrades bought once, kept forever) ----
+  // Implemented entirely in the shell, so each perk automatically applies no
+  // matter which of the 12 games earned the coins/XP that triggers it.
+  function hasPerk(key){
+    try{ return localStorage.getItem('arcade_perk_'+key) === 'true'; }catch(e){ return false; }
+  }
+  function grantPerk(key){
+    try{ localStorage.setItem('arcade_perk_'+key, 'true'); }catch(e){}
+  }
+
+  // ---- Timed XP booster (multiplies XP gained, without touching coin income) ----
+  const XP_BOOST_UNTIL_KEY = 'arcade_xp_boost_until';
+  const XP_BOOST_MULT_KEY = 'arcade_xp_boost_mult';
+  function getXpBoostMultiplier(){
+    try{
+      const until = parseInt(localStorage.getItem(XP_BOOST_UNTIL_KEY)||'0',10)||0;
+      if(Date.now() >= until) return 1;
+      const m = parseFloat(localStorage.getItem(XP_BOOST_MULT_KEY)||'1');
+      return (isNaN(m) || m < 1) ? 1 : m;
+    }catch(e){ return 1; }
+  }
+  function isXpBoostActive(){ return getXpBoostMultiplier() > 1; }
+  function activateXpBoost(mult, hours){
+    try{
+      const currentUntil = parseInt(localStorage.getItem(XP_BOOST_UNTIL_KEY)||'0',10)||0;
+      const base = Math.max(Date.now(), currentUntil); // stack duration if one is already running
+      localStorage.setItem(XP_BOOST_UNTIL_KEY, String(base + hours*3600*1000));
+      localStorage.setItem(XP_BOOST_MULT_KEY, String(mult));
+    }catch(e){}
+  }
   function xpForLevel(n){ return 50 * n * n; } // total XP needed to REACH level n (level 1 = 0 xp)
   function levelFromXP(xp){
     let lvl = 1;
@@ -1261,6 +1350,7 @@
   }
   function addXP(n){
     if(!n || n<=0) return;
+    n = Math.round(n * getXpBoostMultiplier());
     const before = getXP();
     const beforeLevel = levelFromXP(before);
     const after = before + n;
@@ -1271,7 +1361,7 @@
       // Level-up bonus coins are credited directly (not via addCoins) to
       // avoid re-triggering this same level-up check recursively; the bonus
       // still counts toward XP so future levels build on top of it too.
-      const bonus = afterLevel * 5;
+      const bonus = afterLevel * 5 * (hasPerk('levelup_double') ? 2 : 1);
       try{
         localStorage.setItem(XP_KEY, String(getXP()+bonus));
         localStorage.setItem(COINS_KEY, String(getCoins()+bonus));
@@ -1383,6 +1473,8 @@
       if(next === current) return;
       try{ localStorage.setItem(PROGRESS_KEY, String(next)); }catch(e){}
       renderUI();
+      // function declarations are hoisted inside this IIFE, so this is safe here
+      autoClaimIfPerk();
     }
 
     // Convenience hook for the individual game files to call once, right
@@ -1472,6 +1564,36 @@
       if(claimBtn) claimBtn.addEventListener('click', ()=> claimReward());
     }
 
+    // Swap today's challenge for a different one and reset progress. Backs the
+    // shop's daily-challenge reroll consumable.
+    function rerollToday(){
+      ensureToday();
+      if(isClaimed()) return false;
+      let idx = 0;
+      try{ idx = parseInt(localStorage.getItem(INDEX_KEY)||'0',10) || 0; }catch(e){}
+      const current = ((idx%CHALLENGES.length)+CHALLENGES.length)%CHALLENGES.length;
+      const options = CHALLENGES.map((_,i)=>i).filter(i=> i !== current);
+      if(options.length === 0) return false;
+      const pick = options[Math.floor(Math.random()*options.length)];
+      try{
+        localStorage.setItem(INDEX_KEY, String(pick));
+        localStorage.setItem(PROGRESS_KEY, '0');
+        localStorage.removeItem(FIRST_GAME_KEY);
+        localStorage.removeItem(PLAYED_GAMES_KEY);
+      }catch(e){}
+      renderUI();
+      return true;
+    }
+
+    // "Auto-claim" permanent perk: whenever the challenge is finished, bank the
+    // reward without needing the player to come back and press the button.
+    function autoClaimIfPerk(){
+      try{
+        if(typeof hasPerk !== 'function' || !hasPerk('autoclaim_daily')) return;
+        if(isComplete() && !isClaimed()) claimReward();
+      }catch(e){}
+    }
+
     return {
       CHALLENGES,
       updateProgress,
@@ -1482,7 +1604,9 @@
       getTodayChallenge,
       getProgress,
       isComplete,
-      isClaimed
+      isClaimed,
+      rerollToday,
+      autoClaimIfPerk
     };
   })();
 
@@ -1520,16 +1644,53 @@
     // Deterministically pick 3 distinct quest indices for a given week number
     // (same seeded-RNG pattern used for level generation elsewhere on the
     // site), so it's stable across refreshes and rotates automatically.
+    function questCount(){
+      // "4th weekly quest" is a permanent shop perk - more quests per week
+      // means more claimable reward, so it has to be bought once.
+      return (typeof hasPerk === 'function' && hasPerk('weekly_4th')) ? 4 : 3;
+    }
     function pickQuestIndices(week){
       let remaining = QUESTS.map((_,i)=>i);
       const picked = [];
-      for(let k=0; k<3 && remaining.length>0; k++){
+      const want = questCount();
+      for(let k=0; k<want && remaining.length>0; k++){
         const r = seededRandom(week*7 + k);
         const idx = Math.floor(r*remaining.length) % remaining.length;
         picked.push(remaining[idx]);
         remaining.splice(idx,1);
       }
       return picked;
+    }
+    // Swap one active quest for a different, not-currently-active one. Used by
+    // the shop's reroll consumables when a quest feels out of reach.
+    function rerollQuest(slotIdx){
+      ensureThisWeek();
+      let indices = [];
+      try{ indices = JSON.parse(localStorage.getItem(INDICES_KEY)||'[]'); }catch(e){}
+      if(slotIdx < 0 || slotIdx >= indices.length) return false;
+      const claimed = getClaimedArr();
+      if(claimed[slotIdx]) return false; // already cashed in, nothing to reroll
+      const unused = QUESTS.map((_,i)=>i).filter(i=> indices.indexOf(i) === -1);
+      if(unused.length === 0) return false;
+      const pick = unused[Math.floor(Math.random()*unused.length)];
+      indices[slotIdx] = pick;
+      const progress = getProgressArr();
+      progress[slotIdx] = 0;
+      try{
+        localStorage.setItem(INDICES_KEY, JSON.stringify(indices));
+        localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+      }catch(e){}
+      renderUI();
+      return true;
+    }
+    function rerollAllQuests(){
+      ensureThisWeek();
+      let indices = [];
+      try{ indices = JSON.parse(localStorage.getItem(INDICES_KEY)||'[]'); }catch(e){}
+      const claimed = getClaimedArr();
+      let any = false;
+      indices.forEach((_, i)=>{ if(!claimed[i] && rerollQuest(i)) any = true; });
+      return any;
     }
 
     function ensureThisWeek(){
@@ -1609,14 +1770,15 @@
       if(!q || claimed[idx]) return false;
       if((progress[idx]||0) < q.target) return false;
       claimed[idx] = true;
+      const payout = Math.round(q.reward * ((typeof hasPerk === 'function' && hasPerk('quest_reward_boost')) ? 1.5 : 1));
       try{
         localStorage.setItem(CLAIMED_KEY, JSON.stringify(claimed));
         const balance = parseInt(localStorage.getItem(COINS_KEY_WQS)||'0',10) || 0;
-        localStorage.setItem(COINS_KEY_WQS, String(balance + q.reward));
+        localStorage.setItem(COINS_KEY_WQS, String(balance + payout));
         localStorage.setItem(LIFETIME_CLAIMED_KEY, String(getLifetimeClaimedCount()+1));
       }catch(e){ return false; }
       if(typeof renderCoinBalance === 'function') renderCoinBalance();
-      if(typeof addXP === 'function') addXP(q.reward);
+      if(typeof addXP === 'function') addXP(payout);
       renderUI();
       return true;
     }
@@ -1668,7 +1830,9 @@
       getActiveQuests,
       getProgressArr,
       getClaimedArr,
-      getLifetimeClaimedCount
+      getLifetimeClaimedCount,
+      rerollQuest,
+      rerollAllQuests
     };
   })();
 
@@ -1951,25 +2115,46 @@
     { id:'robot', icon:'🤖', price:40 },
     { id:'dragon', icon:'🐉', price:60 },
     { id:'ninja', icon:'🥷', price:60 },
-    { id:'king', icon:'👑', price:100 }
+    { id:'king', icon:'👑', price:100 },
+    { id:'fox', icon:'🦊', price:45 },
+    { id:'panda', icon:'🐼', price:45 },
+    { id:'lion', icon:'🦁', price:55 },
+    { id:'alien', icon:'👽', price:65 },
+    { id:'wizard', icon:'🧙', price:75 },
+    { id:'unicorn', icon:'🦄', price:110 }
   ];
   const FRAMES = [
     { id:'gold', name:'מסגרת זהב', price:50, cssClass:'frameGold' },
     { id:'silver', name:'מסגרת כסף', price:35, cssClass:'frameSilver' },
-    { id:'rainbow', name:'מסגרת קשת', price:90, cssClass:'frameRainbow' }
+    { id:'rainbow', name:'מסגרת קשת', price:90, cssClass:'frameRainbow' },
+    { id:'neon', name:'מסגרת ניאון', price:70, cssClass:'frameNeon' },
+    { id:'fire', name:'מסגרת אש', price:70, cssClass:'frameFire' },
+    { id:'ice', name:'מסגרת קרח', price:70, cssClass:'frameIce' },
+    { id:'emerald', name:'מסגרת אמרלד', price:85, cssClass:'frameEmerald' },
+    { id:'diamond', name:'מסגרת יהלום', price:130, cssClass:'frameDiamond' }
   ];
   const TITLES = [
     { id:'special_badge', icon:'🌟', text:'אלוף הארקייד', price:80 },
     { id:'title_speed', icon:'⚡', text:'מהיר כברק', price:80 },
     { id:'title_memory', icon:'🧠', text:'גאון הזיכרון', price:80 },
     { id:'title_streak', icon:'🔥', text:'מלך הרצף', price:100 },
-    { id:'title_coins', icon:'💰', text:'בארון המטבעות', price:100 }
+    { id:'title_coins', icon:'💰', text:'בארון המטבעות', price:100 },
+    { id:'title_precision', icon:'🎯', text:'קוסם הדיוק', price:90 },
+    { id:'title_collector', icon:'🏅', text:'אספן ההישגים', price:90 },
+    { id:'title_veteran', icon:'💎', text:'ותיק הארקייד', price:120 },
+    { id:'title_recordbreaker', icon:'🚀', text:'שובר שיאים', price:120 },
+    { id:'title_gamer', icon:'🎮', text:'גיימר אמיתי', price:110 }
   ];
   const DECORATIONS = [
     { id:'ribbon', icon:'🎀', price:25 },
     { id:'star', icon:'⭐', price:25 },
     { id:'trophy', icon:'🏆', price:40 },
-    { id:'gem', icon:'💠', price:40 }
+    { id:'gem', icon:'💠', price:40 },
+    { id:'flame', icon:'🔥', price:35 },
+    { id:'bolt', icon:'⚡', price:35 },
+    { id:'rainbow', icon:'🌈', price:45 },
+    { id:'crown', icon:'👑', price:60 },
+    { id:'clover', icon:'🍀', price:45 }
   ];
   const GAME_THEMES = [
     { id:'space', icon:'🌌', name:'ערכת משחק - חלל', desc:'רקע כוכבים כהה לתוך המשחקים עצמם', price:90 },
@@ -1987,7 +2172,12 @@
   const COIN_SKINS = [
     { id:'diamond', icon:'💎', price:50 },
     { id:'candy', icon:'🍬', price:50 },
-    { id:'skull', icon:'💀', price:50 }
+    { id:'skull', icon:'💀', price:50 },
+    { id:'planet', icon:'🪐', price:55 },
+    { id:'pizza', icon:'🍕', price:55 },
+    { id:'ball', icon:'⚽', price:55 },
+    { id:'gift', icon:'🎁', price:60 },
+    { id:'crystal', icon:'🔮', price:75 }
   ];
   const SHOP_CATEGORIES = [
     { id:'theme', label:'🎨 עיצוב ממשק' },
@@ -1998,6 +2188,8 @@
     { id:'fx', label:'✨ אפקטים' },
     { id:'gameworld', label:'🌍 עולם המשחק וסאונד' },
     { id:'permanent', label:'📈 שדרוגים קבועים' },
+    { id:'progress', label:'⭐ רמות והתקדמות' },
+    { id:'utility', label:'🧰 כלים שימושיים' },
     { id:'risk', label:'🎲 סיכון וסיכוי' },
     { id:'mutator', label:'🧪 שינויי משחק מיוחדים' },
     { id:'other', label:'⚡ שיפורים' }
@@ -2009,6 +2201,12 @@
     { id:'theme_neon', icon:'🌌', name:'ערכת עיצוב - ניאון', desc:'סגול-ורוד זוהר לדף הבית', price:80, type:'theme', theme:'neon', category:'theme' },
     { id:'theme_sunset', icon:'🌅', name:'ערכת עיצוב - שקיעה', desc:'כתום-ורוד חמים לדף הבית', price:80, type:'theme', theme:'sunset', category:'theme' },
     { id:'theme_cyberpunk', icon:'🌃', name:'ערכת עיצוב - סייברפאנק', desc:'רקע כהה עם ניאון ורוד-ציאן חד לדף הבית', price:150, type:'theme', theme:'cyberpunk', category:'theme' },
+    { id:'theme_galaxy', icon:'🌠', name:'ערכת עיצוב - גלקסיה', desc:'סגול-חלל עמוק עם נגיעות לילך לדף הבית', price:110, type:'theme', theme:'galaxy', category:'theme' },
+    { id:'theme_candy', icon:'🍭', name:'ערכת עיצוב - ממתקים', desc:'ורוד-תכלת מתוק ובהיר לדף הבית', price:110, type:'theme', theme:'candy', category:'theme' },
+    { id:'theme_gold', icon:'🏆', name:'ערכת עיצוב - זהב', desc:'זהב יוקרתי ונוצץ לדף הבית', price:170, type:'theme', theme:'gold', category:'theme' },
+    { id:'theme_lava', icon:'🌋', name:'ערכת עיצוב - לבה', desc:'אדום-כתום רותח עם שחור וולקני לדף הבית', price:130, type:'theme', theme:'lava', category:'theme' },
+    { id:'theme_sakura', icon:'🌸', name:'ערכת עיצוב - סאקורה', desc:'ורוד פריחת דובדבן עדין לדף הבית', price:120, type:'theme', theme:'sakura', category:'theme' },
+    { id:'theme_matrix', icon:'🟩', name:'ערכת עיצוב - מטריקס', desc:'ירוק קוד זוהר על שחור לדף הבית', price:140, type:'theme', theme:'matrix', category:'theme' },
     ...AVATARS.map(a=>({ id:'avatar_'+a.id, icon:a.icon, name:'דמות '+a.icon, desc:'בחרו את '+a.icon+' כדמות הפרופיל שלכם', price:a.price, type:'avatar', avatarId:a.id, category:'avatar' })),
     ...FRAMES.map(f=>({ id:'frame_'+f.id, icon:'🖼️', name:f.name, desc:'מסגרת מעוצבת סביב תמונת הפרופיל', price:f.price, type:'frame', frameId:f.id, cssClass:f.cssClass, category:'frame' })),
     ...TITLES.map(t=>({ id:t.id, icon:t.icon, name:t.icon+' '+t.text, desc:'תואר מיוחד שיוצג לצד הרצף היומי שלכם', price:t.price, type:'title', titleId:t.id, category:'title' })),
@@ -2035,7 +2233,35 @@
     { id:'mutator_flashlight', icon:'🔦', name:'מצב פנס', desc:'המסך חשוך חוץ מאלומת אור סביב הדמות ב-נחש, Sky Dash, Brick Blast, Block Stack ו-Whack Rush', price:60, type:'fx', key:'mutator_flashlight', category:'mutator' },
     { id:'mutator_turbo_bot', icon:'🚀', name:'מאיץ בוט טורבו', desc:'מכפיל פי 2 את מהירות מצב האוטופיילוט בכל 11 המשחקים - הבוט מגיב ומתחיל סבבים חדשים מהר יותר', price:250, type:'fx', key:'turbo_bot', category:'mutator' },
     { id:'unlock_colorrush', icon:'🔓', name:'פתיחת Color Rush מיידית', desc:'דלגו על דרישת הרצף היומי ושחקו עכשיו', price:150, type:'unlockGame', gameId:'color-rush', category:'other' },
-    { id:'boost_50', icon:'⚡', name:'בוסט 50 נקודות', desc:'מוסיף 50 נקודות למשחק הבא שתפתחו', price:30, type:'boost', amount:50, category:'other' }
+    { id:'boost_50', icon:'⚡', name:'בוסט 50 נקודות', desc:'מוסיף 50 נקודות למשחק הבא שתפתחו', price:30, type:'boost', amount:50, category:'other' },
+
+    // ---- XP boosters (timed - multiply XP only, coins stay unchanged) ----
+    { id:'xp_boost_2x', icon:'⭐', name:'מאיץ XP פי 2 ל-24 שעות', desc:'כל ה-XP שתצברו יוכפל פי 2 ל-24 שעות - הדרך המהירה לעלות רמות. אם כבר פעיל מאיץ, הזמן מתארך', price:120, type:'xpBoost', mult:2, hours:24, category:'progress' },
+    { id:'xp_boost_3x', icon:'🌟', name:'מאיץ XP פי 3 ל-6 שעות', desc:'פי 3 XP לשש שעות - מושלם למרתון משחקים אחד ארוך', price:150, type:'xpBoost', mult:3, hours:6, category:'progress' },
+    { id:'xp_boost_2x_week', icon:'💫', name:'מאיץ XP פי 2 לשבוע שלם', desc:'שבוע שלם (168 שעות) של XP כפול - המשתלם ביותר לטווח ארוך', price:500, type:'xpBoost', mult:2, hours:168, category:'progress' },
+
+    // ---- Permanent progression perks (bought once, apply forever, in every game) ----
+    { id:'perk_levelup_double', icon:'📈', name:'בונוס עליית רמה כפול', desc:'לתמיד: בונוס המטבעות שמקבלים בכל עליית רמה מוכפל פי 2', price:300, type:'perk', perk:'levelup_double', category:'progress' },
+    { id:'perk_gameofday_double', icon:'🌟', name:'בונוס משחק היום כפול', desc:'לתמיד: בונוס "משחק היום" גדל מ-15 ל-30 מטבעות בכל יום', price:220, type:'perk', perk:'gameofday_double', category:'progress' },
+    { id:'perk_quest_reward_boost', icon:'🗓️', name:'פרסי משימות שבועיות +50%', desc:'לתמיד: כל פרס של משימה שבועית גדל בחצי (למשל 60 הופך ל-90)', price:350, type:'perk', perk:'quest_reward_boost', category:'progress' },
+    { id:'perk_weekly_4th', icon:'📅', name:'משימה שבועית רביעית', desc:'לתמיד: 4 משימות שבועיות במקום 3 - עוד פרס לאסוף כל שבוע', price:400, type:'perk', perk:'weekly_4th', category:'progress' },
+    { id:'perk_autoclaim_daily', icon:'🤖', name:'איסוף אוטומטי לאתגר היומי', desc:'לתמיד: ברגע שמשלימים את האתגר היומי הפרס נכנס לארנק לבד - בלי לחזור וללחוץ', price:260, type:'perk', perk:'autoclaim_daily', category:'progress' },
+    { id:'perk_chest_double', icon:'🎁', name:'תיבות עשירות', desc:'לתמיד: כל תיבה יומית נותנת פי 2 מטבעות', price:400, type:'perk', perk:'chest_double', category:'progress' },
+
+    // ---- Rerolls & fixes (when a target feels out of reach) ----
+    { id:'reroll_daily', icon:'🔄', name:'החלפת האתגר היומי', desc:'לא מתחברים לאתגר של היום? החליפו אותו באחר מיד (רק אם עוד לא אספתם את הפרס)', price:50, type:'rerollDaily', category:'utility' },
+    { id:'reroll_weekly_one', icon:'♻️', name:'החלפת משימה שבועית', desc:'מחליף את המשימה השבועית הראשונה שעוד לא נאספה במשימה אחרת', price:80, type:'rerollWeeklyOne', category:'utility' },
+    { id:'reroll_weekly_all', icon:'🔃', name:'החלפת כל המשימות השבועיות', desc:'מגריל מחדש את כל המשימות השבועיות שעוד לא אספתם', price:130, type:'rerollWeeklyAll', category:'utility' },
+    { id:'streak_repair', icon:'🔧', name:'תיקון רצף שנשבר', desc:'מחזיר את הרצף היומי לשיא הגבוה ביותר שהגעתם אליו - להצלה אחרי שכבר נשבר', price:180, type:'streakRepair', category:'utility' },
+
+    // ---- Daily chest utilities ----
+    { id:'chest_ticket_1', icon:'🎟️', name:'כרטיס פתיחה מיידית לתיבה', desc:'מדלג על ההמתנה ופותח את התיבה היומית עכשיו (כרטיס אחד)', price:60, type:'chestTicket', amount:1, category:'utility' },
+    { id:'chest_ticket_3', icon:'🎫', name:'3 כרטיסי פתיחה מיידית', desc:'שלושה כרטיסים לדילוג על ההמתנה של התיבה היומית - משתלם יותר מבודד', price:150, type:'chestTicket', amount:3, category:'utility' },
+    { id:'keys_pack_10', icon:'🔑', name:'חבילת 10 מפתחות', desc:'10 מפתחות אוצר בבת אחת - הרבה יותר משתלם מחבילת ה-3', price:140, type:'keysPack', amount:10, category:'utility' },
+
+    // ---- Bigger point boosts (the existing 50-point boost, scaled up) ----
+    { id:'boost_150', icon:'⚡', name:'בוסט 150 נקודות', desc:'מוסיף 150 נקודות למשחק הבא שתפתחו', price:80, type:'boost', amount:150, category:'other' },
+    { id:'boost_400', icon:'💥', name:'בוסט 400 נקודות', desc:'מוסיף 400 נקודות למשחק הבא שתפתחו - הזינוק הגדול', price:190, type:'boost', amount:400, category:'other' }
   ];
   function isOwned(item){
     try{
@@ -2052,6 +2278,10 @@
       if(item.type==='soundtrack') return localStorage.getItem('arcade_shop_soundtrack_'+item.soundtrackId) === 'true';
       if(item.type==='sfxskin') return localStorage.getItem('arcade_shop_sfxskin_'+item.sfxId) === 'true';
       if(item.type==='coinskin') return localStorage.getItem('arcade_shop_coinskin_'+item.skinId) === 'true';
+      // Permanent perks are one-time purchases; everything else in the new
+      // batch (boosters, rerolls, tickets, key packs) is intentionally
+      // repeatable, so it is never considered "owned".
+      if(item.type==='perk') return hasPerk(item.perk);
       return false;
     }catch(e){ return false; }
   }
@@ -2073,7 +2303,7 @@
     }catch(e){}
   }
   // ---- Coin icon skin (affects the wallet balance display) ----
-  const COIN_SKIN_ICON_MAP = { diamond:'💎', candy:'🍬', skull:'💀' };
+  const COIN_SKIN_ICON_MAP = { diamond:'💎', candy:'🍬', skull:'💀', planet:'🪐', pizza:'🍕', ball:'⚽', gift:'🎁', crystal:'🔮' };
   function getCoinIcon(){
     try{
       const skin = localStorage.getItem('arcade_active_coinskin') || 'default';
@@ -2116,6 +2346,25 @@
     }
     if(isGlobalChestEventActive()) hours = Math.max(2, hours/2);
     return hours;
+  }
+  // ---- Instant-open charges: a stack of "skip the wait once" tickets ----
+  const CHEST_TICKETS_KEY = 'arcade_chest_tickets';
+  function getChestTickets(){
+    try{ return parseInt(localStorage.getItem(CHEST_TICKETS_KEY)||'0',10) || 0; }catch(e){ return 0; }
+  }
+  function addChestTickets(n){
+    try{ localStorage.setItem(CHEST_TICKETS_KEY, String(getChestTickets()+n)); }catch(e){}
+  }
+  // Spends one ticket by clearing the cooldown, so the existing chest flow
+  // (and its whole crate-reveal animation) then works completely unchanged.
+  function useChestTicket(){
+    if(getChestTickets() <= 0) return false;
+    if(getChestReadyState().ready) return false; // no point burning one
+    try{
+      localStorage.setItem(CHEST_TICKETS_KEY, String(getChestTickets()-1));
+      localStorage.setItem(DAILY_CHEST_KEY, '0');
+    }catch(e){}
+    return true;
   }
   function getChestReadyState(){
     try{
@@ -2182,6 +2431,8 @@
       coins *= 2;
       doubled = true;
     }
+    // Permanent "rich crates" perk: doubles the coin half of every crate.
+    if(hasPerk('chest_double')) coins *= 2;
     return { tierIdx, coins, itemWon, doubled };
   }
   function buildChaosCrateRevealSequence(targetIdx){
@@ -2280,9 +2531,18 @@
     } else {
       const hrs = Math.floor(state.remainingMs/3600000);
       const mins = Math.floor((state.remainingMs%3600000)/60000);
-      btn.textContent = `🎁 תיבה יומית - עוד ${hrs}ש ${mins}ד`;
-      btn.disabled = true;
-      btn.classList.remove('chestReady');
+      const tickets = getChestTickets();
+      if(tickets > 0){
+        // Holding an instant-open ticket makes the button usable during the
+        // cooldown; tapping it spends one ticket and opens the chest right away.
+        btn.textContent = `🎟️ פתחו עכשיו בכרטיס (${tickets}) - עוד ${hrs}ש ${mins}ד`;
+        btn.disabled = false;
+        btn.classList.add('chestReady');
+      } else {
+        btn.textContent = `🎁 תיבה יומית - עוד ${hrs}ש ${mins}ד`;
+        btn.disabled = true;
+        btn.classList.remove('chestReady');
+      }
     }
   }
   // ---- Luck potion (boosts rare-item odds in compatible games for 30 minutes) ----
@@ -2317,8 +2577,9 @@
     try{ claimedDate = localStorage.getItem(KEY); }catch(e){}
     if(claimedDate === todayStr) return;
     try{ localStorage.setItem(KEY, todayStr); }catch(e){}
-    addCoins(15);
-    showQuickNotice('🌟 בונוס משחק היום: +15 מטבעות!');
+    const amount = 15 * (hasPerk('gameofday_double') ? 2 : 1);
+    addCoins(amount);
+    showQuickNotice(`🌟 בונוס משחק היום: +${amount} מטבעות!`);
   }
 
   function drainPendingGameCoins(){
@@ -2462,6 +2723,8 @@
         if(equippable && owned){ btnLabel = equipped ? '✅ פעיל' : 'החל'; btnClass = equipped?'equipped':'owned'; disabled = equipped; }
         else if(item.type==='unlockGame' && owned){ btnLabel = '✅ נפתח'; btnClass='owned'; disabled = true; }
         else if(item.type==='consumable' && owned){ btnLabel = `${item.icon} פעיל - ממתין לניצול`; btnClass='owned'; disabled = true; }
+        else if(item.type==='perk' && owned){ btnLabel = '✅ נרכש לתמיד'; btnClass='owned'; disabled = true; }
+        else if(item.type==='xpBoost' && isXpBoostActive()){ btnLabel = `קנו ב-${item.price} 🪙 (מאריך את המאיץ)`; }
         if(item.type==='fx' && owned){
           const on = isFxEffectEnabled(item.key);
           return `
@@ -2570,6 +2833,92 @@
         if(item.type==='boost'){
           if(!spendCoins(item.price)) return;
           try{ localStorage.setItem('arcade_admin_bonus', JSON.stringify({amount:item.amount, id: Date.now()})); }catch(e){}
+          renderShop();
+          return;
+        }
+        if(item.type==='xpBoost'){
+          if(!spendCoins(item.price)) return;
+          activateXpBoost(item.mult, item.hours);
+          showQuickNotice(`⭐ מאיץ XP פי ${item.mult} הופעל ל-${item.hours} שעות!`);
+          renderShop();
+          return;
+        }
+        if(item.type==='perk'){
+          if(hasPerk(item.perk)) return;
+          if(!spendCoins(item.price)) return;
+          grantPerk(item.perk);
+          // Some perks change what's on screen right away, so refresh the
+          // affected views instead of waiting for the next page load.
+          if(item.perk==='weekly_4th' && window.WeeklyQuestSystem){
+            try{
+              localStorage.removeItem('arcade_weekly_quest_week'); // force this week to re-pick with 4 slots
+              window.WeeklyQuestSystem.renderUI('weeklyQuestSystemCard');
+            }catch(e){}
+          }
+          if(item.perk==='autoclaim_daily' && window.DailyChallengeSystem){
+            try{ window.DailyChallengeSystem.autoClaimIfPerk(); }catch(e){}
+          }
+          renderLevelBadge();
+          renderShop();
+          return;
+        }
+        if(item.type==='rerollDaily'){
+          if(!window.DailyChallengeSystem) return;
+          if(window.DailyChallengeSystem.isClaimed()){ showQuickNotice('כבר אספתם את הפרס היומי - אין מה להחליף 🙂'); return; }
+          if(!spendCoins(item.price)) return;
+          const ok = window.DailyChallengeSystem.rerollToday();
+          showQuickNotice(ok ? '🔄 האתגר היומי הוחלף!' : 'לא הצלחתי להחליף את האתגר');
+          renderChallenge();
+          renderShop();
+          return;
+        }
+        if(item.type==='rerollWeeklyOne'){
+          if(!window.WeeklyQuestSystem) return;
+          const claimed = window.WeeklyQuestSystem.getClaimedArr();
+          const slot = claimed.findIndex(c=>!c);
+          if(slot === -1){ showQuickNotice('כל המשימות השבועיות כבר נאספו 🎉'); return; }
+          if(!spendCoins(item.price)) return;
+          const ok = window.WeeklyQuestSystem.rerollQuest(slot);
+          showQuickNotice(ok ? '♻️ המשימה השבועית הוחלפה!' : 'לא הצלחתי להחליף את המשימה');
+          renderShop();
+          return;
+        }
+        if(item.type==='rerollWeeklyAll'){
+          if(!window.WeeklyQuestSystem) return;
+          const claimed = window.WeeklyQuestSystem.getClaimedArr();
+          if(!claimed.some(c=>!c)){ showQuickNotice('כל המשימות השבועיות כבר נאספו 🎉'); return; }
+          if(!spendCoins(item.price)) return;
+          const ok = window.WeeklyQuestSystem.rerollAllQuests();
+          showQuickNotice(ok ? '🔃 כל המשימות הוחלפו!' : 'לא הצלחתי להחליף את המשימות');
+          renderShop();
+          return;
+        }
+        if(item.type==='streakRepair'){
+          if(!canRepairStreak()){ showQuickNotice('הרצף שלכם כבר בשיא - אין מה לתקן 🔥'); return; }
+          if(!spendCoins(item.price)) return;
+          const target = getBestStreak();
+          if(repairStreak()){
+            dailyStreak = target;
+            renderStreakBadge();
+            renderPrizes();
+            renderCards();
+            showQuickNotice(`🔧 הרצף שוחזר ל-${target} ימים!`);
+          }
+          renderShop();
+          return;
+        }
+        if(item.type==='chestTicket'){
+          if(!spendCoins(item.price)) return;
+          addChestTickets(item.amount);
+          showQuickNotice(`🎟️ נוספו ${item.amount} כרטיסי פתיחה מיידית לתיבה!`);
+          renderDailyChest();
+          renderShop();
+          return;
+        }
+        if(item.type==='keysPack'){
+          if(!spendCoins(item.price)) return;
+          try{ localStorage.setItem(TREASURE_KEYS_KEY, String(getTreasureKeys()+item.amount)); }catch(e){}
+          showQuickNotice(`🔑 נוספו ${item.amount} מפתחות אוצר!`);
           renderShop();
           return;
         }
@@ -3127,6 +3476,9 @@
   const dailyChestBtn = document.getElementById('dailyChestBtn');
   if(dailyChestBtn){
     dailyChestBtn.addEventListener('click', ()=>{
+      // If the chest is still on cooldown but the player bought an
+      // instant-open ticket, spend one to clear the wait first.
+      if(!getChestReadyState().ready) useChestTicket();
       openChaosCrate();
       renderDailyChest();
     });
@@ -3197,6 +3549,24 @@
     const xp = getXP();
     const info = xpProgressInLevel(xp);
     const pct = info.needed>0 ? Math.max(0, Math.min(100, Math.round((info.current/info.needed)*100))) : 100;
+    let boostLine = '';
+    if(isXpBoostActive()){
+      const until = parseInt(localStorage.getItem(XP_BOOST_UNTIL_KEY)||'0',10)||0;
+      const msLeft = Math.max(0, until - Date.now());
+      const hrs = Math.floor(msLeft/3600000);
+      const mins = Math.floor((msLeft%3600000)/60000);
+      boostLine = `<div class="dcsProgressLabel" style="color:#ffd803;">⚡ מאיץ XP פי ${getXpBoostMultiplier()} פעיל - עוד ${hrs}ש ${mins}ד</div>`;
+    }
+    const perkLines = [];
+    if(hasPerk('levelup_double')) perkLines.push('📈 בונוס עליית רמה כפול');
+    if(hasPerk('gameofday_double')) perkLines.push('🌟 בונוס משחק היום כפול');
+    if(hasPerk('quest_reward_boost')) perkLines.push('🗓️ פרסי משימות +50%');
+    if(hasPerk('weekly_4th')) perkLines.push('📅 4 משימות שבועיות');
+    if(hasPerk('autoclaim_daily')) perkLines.push('🤖 איסוף אוטומטי');
+    if(hasPerk('chest_double')) perkLines.push('🎁 תיבות עשירות');
+    const perksHtml = perkLines.length
+      ? `<div class="dcsProgressLabel" style="opacity:0.8;">שדרוגים קבועים: ${perkLines.join(' · ')}</div>`
+      : '';
     el.innerHTML = `
       <div class="dcsHead">
         <span class="dcsTitle">⭐ רמה ${info.level}</span>
@@ -3204,6 +3574,8 @@
       </div>
       <div class="dcsProgressOuter"><div class="dcsProgressInner" style="width:${pct}%"></div></div>
       <div class="dcsProgressLabel">${info.current} / ${info.needed} עד לרמה ${info.level+1}</div>
+      ${boostLine}
+      ${perksHtml}
     `;
   }
   const progressBtn = document.getElementById('progressBtn');
@@ -3719,7 +4091,7 @@
   });
 
   // ---- What's new ----
-  const WHATS_NEW_VERSION = '3';
+  const WHATS_NEW_VERSION = '4';
   const WHATS_NEW_ITEMS = [
     '🏆 מסך "ההישגים שלי" - תגים שנפתחים אוטומטית לפי השיאים והרצף שלכם, עם שיתוף',
     '🎯 אתגר יומי חדש כל יום עם בונוס נקודות',
@@ -3730,7 +4102,9 @@
     '📈 מערכת רמות חדשה - כל מטבע מקדם אתכם, בלי תקרה',
     '🗓️ משימות שבועיות - 3 יעדים חדשים כל שבוע, בנוסף לאתגר היומי',
     '🌟 "משחק היום" - בונוס יומי למשחק ספציפי, כדי לגוון',
-    '🎮 17 הישגים חדשים - שיאים בכל אחד מ-12 המשחקים ועוד'
+    '🎮 17 הישגים חדשים - שיאים בכל אחד מ-12 המשחקים ועוד',
+    '🛒 50 פריטים חדשים בחנות! מאיצי XP, שדרוגים קבועים, כרטיסי תיבה, החלפת משימות, תיקון רצף ועוד',
+    '🎧 הפלייליסטים שלי בספוטיפיי - בגדול בדף הבית'
   ];
   try{
     const seenVersion = localStorage.getItem('arcade_last_seen_version');
