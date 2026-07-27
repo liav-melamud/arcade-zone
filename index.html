@@ -352,6 +352,18 @@
   .spotifyRowBody{ display:none; padding:0 12px 14px; }
   .spotifyRowBody.open{ display:block; }
   .spotifyRowBody iframe{ width:100%; border-radius:12px; border:none; display:block; }
+  .spotifySearchBox{ position:relative; margin-bottom:14px; }
+  .spotifySearchInput{
+    width:100%; padding:13px 44px 13px 16px; border-radius:14px; border:1px solid rgba(255,255,255,0.18);
+    background:rgba(255,255,255,0.06); color:#fff; font-size:14px; outline:none; box-sizing:border-box;
+    font-family:inherit;
+  }
+  .spotifySearchInput:focus{ border-color:#1DB954; }
+  .spotifySearchIcon{ position:absolute; left:16px; top:50%; transform:translateY(-50%); font-size:16px; opacity:0.6; pointer-events:none; }
+  .spotifySearchResults{ margin-bottom:14px; }
+  .spotifySearchEmpty{ text-align:center; font-size:12.5px; opacity:0.55; padding:10px 0; }
+  .spotifyDivider{ display:flex; align-items:center; gap:10px; margin:6px 0 14px; opacity:0.5; font-size:12px; }
+  .spotifyDivider::before, .spotifyDivider::after{ content:''; flex:1; height:1px; background:rgba(255,255,255,0.2); }
 
   /* Daily Challenge System (separate multi-metric daily challenge, rotates through a pool by date) */
   .dcsCard{ max-width:600px; margin: 0 auto 34px; }
@@ -727,7 +739,13 @@
 
       <div class="spotifySection" id="spotifySection">
         <h2 class="spotifySectionTitle">🎧 הפלייליסטים שלי בספוטיפיי</h2>
-        <p class="hint" style="text-align:center; margin-bottom:16px;">האזינו חינם, בלי צורך בחשבון - ישירות דרך הנגן הרשמי והמוטמע של ספוטיפיי (לא קובץ מארח באתר).</p>
+        <p class="hint" style="text-align:center; margin-bottom:16px;">האזינו חינם, בלי צורך בחשבון - ישירות דרך הנגן הרשמי והמוטמע של ספוטיפיי (לא קובץ מארח באתר). לניגון מלא של השיר (לא רק קטע תצוגה מקדימה) - התחברו לחשבון הספוטיפיי שלכם בתוך הנגן המוטמע.</p>
+        <div class="spotifySearchBox">
+          <input type="text" class="spotifySearchInput" id="spotifySearchInput" placeholder="חפשו שיר או אמן... (למשל: Ed Sheeran, Queen)">
+          <span class="spotifySearchIcon">🔍</span>
+        </div>
+        <div class="spotifySearchResults" id="spotifySearchResults"></div>
+        <div class="spotifyDivider">הפלייליסטים שלי</div>
         <div id="spotifyPlaylistList"></div>
       </div>
 
@@ -1927,6 +1945,104 @@
     });
   }
   renderSpotifyPlaylists();
+
+  // ---------- Spotify song search (client-side library, official track embeds only) ----------
+  // A real-time search across Spotify's whole catalog would require exposing API
+  // secret keys in this public page's source, which is unsafe and against Spotify's
+  // terms - so instead we ship a sizeable local library of well-known songs across
+  // genres/eras and search within it entirely client-side. Selecting a result lazy-
+  // loads the official open.spotify.com/embed/track iframe, same mechanism as the
+  // playlists above - never a rehosted/downloaded audio file.
+  const SPOTIFY_TRACK_LIBRARY = [
+    { id:'7qiZfU4dY1lWllzX7mPBI3', title:'Shape of You', artist:'Ed Sheeran' },
+    { id:'3bNv3VuUOKgrf5hu3YcuRo', title:'Someone Like You', artist:'Adele' },
+    { id:'32OlwWuMpZ6b0aN2RZOeMS', title:'Uptown Funk', artist:'Mark Ronson ft. Bruno Mars' },
+    { id:'39LLxExYz6ewLAcYrzQQyP', title:'Levitating', artist:'Dua Lipa' },
+    { id:'6UelLqGlWMcVH1E5c4H7lY', title:'Watermelon Sugar', artist:'Harry Styles' },
+    { id:'4Dvkj6JhhA12EX05fT7y2e', title:'As It Was', artist:'Harry Styles' },
+    { id:'7DSAEUvxU8FajXtRloy8M0', title:'Flowers', artist:'Miley Cyrus' },
+    { id:'5HCyWlXZPP0y6Gqq8TgA20', title:'STAY', artist:'The Kid LAROI, Justin Bieber' },
+    { id:'0tgVpDi06FyKpA1z0VMD4v', title:'Perfect', artist:'Ed Sheeran' },
+    { id:'4OSBTYWVwsQhGLF9NHvIbR', title:'Rolling in the Deep', artist:'Adele' },
+    { id:'6JV2JOEocMgcZxYSZelKcc', title:"Can't Stop the Feeling!", artist:'Justin Timberlake' },
+    { id:'60nZcImufyMA1MKQY3dcCH', title:'Happy', artist:'Pharrell Williams' },
+    { id:'2JiDi0qAXsPwhPqA2qaKGt', title:'Bohemian Rhapsody', artist:'Queen' },
+    { id:'40riOy7x9W7GXjyGp4pjAv', title:'Hotel California', artist:'Eagles' },
+    { id:'7tZwqqQwTEzoiLBI4kS15H', title:"Livin' on a Prayer", artist:'Bon Jovi' },
+    { id:'08mG3Y1vljYA6bvDt4Wqkj', title:'Back In Black', artist:'AC/DC' },
+    { id:'2nLtzopw4rPReszdYBJU6h', title:'Numb', artist:'Linkin Park' },
+    { id:'60a0Rd6pjrkxjPbaKzXjfq', title:'In the End', artist:'Linkin Park' },
+    { id:'0F7FA14euOIX8KcbEturGH', title:'Old Town Road', artist:'Lil Nas X' },
+    { id:'3aXo6nJjexSdb6wCpN7Ysy', title:'Redbone', artist:'Childish Gambino' },
+    { id:'152lZdxL1OR0ZMW6KquMif', title:'Location', artist:'Khalid' },
+    { id:'0TDLuuLlV54CkRRUOahJb4', title:'Titanium', artist:'David Guetta ft. Sia' },
+    { id:'7BKLCZ1jbUBVqRi2FVlTVw', title:'Closer', artist:'The Chainsmokers ft. Halsey' },
+    { id:'7gHs73wELdeycvS48JfIos', title:'Faded', artist:'Alan Walker' },
+    { id:'47EiUVwUp4C9fGccaPuUCS', title:'DÁKITI', artist:'Bad Bunny, Jhay Cortez' },
+    { id:'0ZUo4YjG4saFnEJhdWp9Bt', title:'Before He Cheats', artist:'Carrie Underwood' },
+    { id:'6bvZRLLkBKkmgpBJTTj3QK', title:'How You Like That', artist:'BLACKPINK' },
+    { id:'5bkO6RcrHBuOO0juI6OREJ', title:'Gangnam Style', artist:'PSY' },
+    { id:'0DwClY2t9YAWHBROMIgrXb', title:'Ho Hey', artist:'The Lumineers' },
+    { id:'7J1uxwnxfQLu4APicE5Rnj', title:'Billie Jean', artist:'Michael Jackson' },
+    { id:'41tTCXOzxSWAoVrfeIIh8x', title:'Wonderwall', artist:'Oasis' },
+    { id:'1mea3bSkSGXuIRvnydlB5b', title:'Viva La Vida', artist:'Coldplay' },
+    { id:'5vNRhkKd0yEAg8suGBpjeY', title:'APT.', artist:'ROSÉ, Bruno Mars' },
+    { id:'2Y7gsy3svMkJb1iaSvAgyv', title:'Money Trees', artist:'Kendrick Lamar' },
+    { id:'2xLMifQCjDGFmkHkpNLD9h', title:'SICKO MODE', artist:'Travis Scott' }
+  ];
+  function renderSpotifySearchResults(query){
+    const resultsWrap = document.getElementById('spotifySearchResults');
+    if(!resultsWrap) return;
+    const q = query.trim().toLowerCase();
+    if(!q){ resultsWrap.innerHTML = ''; return; }
+    const matches = SPOTIFY_TRACK_LIBRARY.filter(t=>
+      t.title.toLowerCase().includes(q) || t.artist.toLowerCase().includes(q)
+    ).slice(0, 12);
+    if(matches.length === 0){
+      resultsWrap.innerHTML = '<div class="spotifySearchEmpty">לא נמצאו שירים תואמים בספרייה שלנו - נסו לחפש אמן או שיר אחר 🙂</div>';
+      return;
+    }
+    resultsWrap.innerHTML = matches.map((t, idx)=>`
+      <div class="spotifyRow">
+        <div class="spotifyRowHead" data-sp-track-idx="${idx}">
+          <span class="spotifyRowIcon">🎵</span>
+          <span class="spotifyRowName">${t.title} <span style="opacity:0.6; font-weight:600;">- ${t.artist}</span></span>
+          <span class="spotifyRowToggle" data-sp-track-toggle="${idx}">▶ נגן</span>
+        </div>
+        <div class="spotifyRowBody" id="spotifyTrackRowBody${idx}"></div>
+      </div>
+    `).join('');
+    resultsWrap.querySelectorAll('[data-sp-track-idx]').forEach(head=>{
+      head.addEventListener('click', ()=>{
+        const idx = head.dataset.spTrackIdx;
+        const body = document.getElementById('spotifyTrackRowBody'+idx);
+        const toggle = resultsWrap.querySelector(`[data-sp-track-toggle="${idx}"]`);
+        const isOpen = body.classList.contains('open');
+        if(isOpen){
+          body.classList.remove('open');
+          toggle.textContent = '▶ נגן';
+          return;
+        }
+        if(!body.dataset.loaded){
+          const t = matches[idx];
+          const iframe = document.createElement('iframe');
+          iframe.src = `https://open.spotify.com/embed/track/${t.id}?utm_source=generator`;
+          iframe.height = '152';
+          iframe.allow = 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture';
+          iframe.loading = 'lazy';
+          body.appendChild(iframe);
+          body.dataset.loaded = 'true';
+        }
+        body.classList.add('open');
+        toggle.textContent = '▲ סגור';
+      });
+    });
+  }
+  (function wireSpotifySearch(){
+    const input = document.getElementById('spotifySearchInput');
+    if(!input) return;
+    input.addEventListener('input', ()=> renderSpotifySearchResults(input.value));
+  })();
 
   const grid = document.getElementById('grid');
   const homeView = document.getElementById('homeView');
