@@ -1734,16 +1734,10 @@
       const shareBtn = document.getElementById('challengeToastShareBtn');
       const closeBtn = document.getElementById('challengeToastCloseBtn');
       const url = buildChallengeUrl(game.id, roundedScore);
-      const text = `אתגרתי אתכם ב-Arcade Zone! השגתי ${roundedScore} ${game.unit||'נקודות'} ב-${game.title} - מי שיעבור אותי הוא מלך/מלכה 👑\n${url}`;
+      const text = `רוצה לנסות לנצח אותי ב-${roundedScore} ${game.unit||'נקודות'}? כנס: ${url}`;
       if(shareBtn){
-        shareBtn.addEventListener('click', async ()=>{
-          try{
-            if(navigator.share){
-              await navigator.share({ title:'Arcade Zone - אתגר', text, url });
-            } else {
-              window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
-            }
-          }catch(e){}
+        shareBtn.addEventListener('click', ()=>{
+          window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
         });
       }
       if(closeBtn) closeBtn.addEventListener('click', ()=> toast.classList.remove('show'));
@@ -1776,7 +1770,7 @@
       const banner = document.createElement('div');
       banner.className = 'incomingChallengeBanner';
       banner.innerHTML = `
-        <div class="incomingChallengeText">🎯 אותגרתם! חבר השיג <b>${score} ${game.unit||'נקודות'}</b> ב-${game.title} - תוכלו לעבור אותו?</div>
+        <div class="incomingChallengeText">🎯 עקוף את החבר שלך - תעשה יותר מהשיא שלו: <b>${score} ${game.unit||'נקודות'}</b> ב-${game.title}!</div>
         <button class="incomingChallengeBtn" id="incomingChallengeBtn">שחקו עכשיו</button>
         <button class="incomingChallengeClose" id="incomingChallengeClose">✕</button>
       `;
