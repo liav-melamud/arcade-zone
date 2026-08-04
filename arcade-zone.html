@@ -365,6 +365,40 @@
   .spotifyDivider{ display:flex; align-items:center; gap:10px; margin:6px 0 14px; opacity:0.5; font-size:12px; }
   .spotifyDivider::before, .spotifyDivider::after{ content:''; flex:1; height:1px; background:rgba(255,255,255,0.2); }
 
+  /* Challenge-a-friend toast (shown after a game round ends) + incoming-challenge banner */
+  .challengeToast{
+    position:fixed; left:50%; bottom:-120px; transform:translateX(-50%);
+    background:linear-gradient(135deg,#1a0b2e,#2d1b4e); border:1px solid rgba(255,216,3,0.4);
+    border-radius:16px; padding:14px 16px; display:flex; align-items:center; gap:12px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.5); z-index:5000; max-width:92vw;
+    transition:bottom 0.35s ease; flex-wrap:wrap; justify-content:center;
+  }
+  .challengeToast.show{ bottom:20px; }
+  .challengeToastText{ font-size:13px; font-weight:700; }
+  .challengeToastBtn{
+    background:linear-gradient(135deg,#ffd803,#ff6b9d); color:#1a0b2e; border:none;
+    border-radius:10px; padding:8px 14px; font-weight:800; font-size:12.5px; cursor:pointer; white-space:nowrap;
+  }
+  .challengeToastClose{
+    background:transparent; border:none; color:#fff; opacity:0.6; font-size:14px; cursor:pointer; padding:4px;
+  }
+  .incomingChallengeBanner{
+    position:fixed; top:-140px; left:50%; transform:translateX(-50%);
+    background:linear-gradient(135deg,#ff6b9d,#ffd803); color:#1a0b2e;
+    border-radius:16px; padding:14px 16px; display:flex; align-items:center; gap:12px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.5); z-index:5000; max-width:92vw;
+    transition:top 0.35s ease; flex-wrap:wrap; justify-content:center; text-align:center;
+  }
+  .incomingChallengeBanner.show{ top:14px; }
+  .incomingChallengeText{ font-size:13px; font-weight:700; }
+  .incomingChallengeBtn{
+    background:#1a0b2e; color:#ffd803; border:none; border-radius:10px; padding:8px 14px;
+    font-weight:800; font-size:12.5px; cursor:pointer; white-space:nowrap;
+  }
+  .incomingChallengeClose{
+    background:transparent; border:none; color:#1a0b2e; opacity:0.6; font-size:14px; cursor:pointer; padding:4px;
+  }
+
   /* Daily Challenge System (separate multi-metric daily challenge, rotates through a pool by date) */
   .dcsCard{ max-width:600px; margin: 0 auto 34px; }
   .dcsBox{
@@ -733,6 +767,7 @@
           <button class="headerActionBtn" id="demoBtn">🎬 הדגמה</button>
           <button class="headerActionBtn" id="dailyChestBtn">🎁 תיבה יומית</button>
           <button class="headerActionBtn" id="crtToggleBtn" title="הפעל/כבה אפקט מסך רטרו">📺 מסך רטרו</button>
+          <button class="headerActionBtn" id="syncBtn">☁️ סנכרון מכשירים</button>
           <button class="headerActionBtn" id="shopBtn" style="background:linear-gradient(135deg,#ffd803,#ff9a3c); color:#1a0b2e; border:none;">🛒 חנות</button>
         </div>
       </header>
@@ -1017,6 +1052,37 @@
       <div id="weeklyQuestSystemCard"></div>
       <div class="adminRow" style="margin-top:14px; justify-content:center;">
         <button class="adminBtnGhost" id="progressCloseBtn">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="adminOverlay" id="syncOverlay">
+    <div class="adminPanelBox" style="max-width:480px; text-align:center;">
+      <h3>☁️ סנכרון בין מכשירים</h3>
+      <p class="hint">העבירו את המטבעות, ההתקדמות והפריטים שקניתם למכשיר אחר - סרקו את הקוד עם הטלפון השני, שלחו בוואטסאפ, או הורידו/ייבאו קובץ גיבוי.</p>
+      <div id="syncQrWrap" style="margin:14px 0; display:none;">
+        <img id="syncQrImg" alt="QR קוד לסנכרון" style="width:190px; height:190px; border-radius:12px; background:#fff; padding:8px; display:block; margin:0 auto;">
+        <p class="hint" style="margin-top:8px;">סרקו עם מצלמת הטלפון השני - זה יפתח את האתר ויציע לשחזר אוטומטית.</p>
+      </div>
+      <p class="hint" id="syncQrTooBig" style="display:none; color:#ffb347;">ההתקדמות שלכם גדולה מדי לקוד QR - השתמשו באחת האפשרויות למטה במקום.</p>
+      <div class="adminRow">
+        <button class="adminBtnPrimary" id="syncWhatsappBtn" style="background:linear-gradient(135deg,#25D366,#128C7E); color:#fff;">📲 שלח בוואטסאפ</button>
+        <button class="adminBtnGhost" id="syncExportBtn">⬇️ הורד קובץ גיבוי</button>
+      </div>
+      <hr style="border:none; border-top:1px solid rgba(255,255,255,0.14); margin:16px 0;">
+      <p class="hint" style="margin-bottom:8px;">לשחזור במכשיר הזה:</p>
+      <div class="adminRow">
+        <button class="adminBtnGhost" id="syncImportBtn">📂 ייבוא מקובץ</button>
+        <button class="adminBtnGhost" id="syncImportTextToggle">📋 ייבוא מטקסט מודבק</button>
+      </div>
+      <input type="file" id="syncImportFile" accept="application/json" style="display:none;">
+      <div id="syncImportTextBox" style="display:none; margin-top:10px;">
+        <textarea class="adminTextarea" id="syncImportTextarea" placeholder='הדביקו כאן את קוד הגיבוי'></textarea>
+        <button class="adminBtnPrimary" id="syncImportTextBtn" style="width:100%;">שחזר מהטקסט</button>
+      </div>
+      <div class="bonusResultMsg" id="syncDataResult"></div>
+      <div class="adminRow" style="margin-top:14px; justify-content:center;">
+        <button class="adminBtnGhost" id="syncCloseBtn">סגור</button>
       </div>
     </div>
   </div>
@@ -1626,6 +1692,106 @@
       rerollToday,
       autoClaimIfPerk
     };
+  })();
+
+  // ---------- Challenge-a-friend (piggybacks on the existing reportScore() call) ----------
+  // Every game that has a numeric score already calls
+  // window.parent.DailyChallengeSystem.reportScore(gameId, score) the instant a
+  // round ends (see the Daily Challenge System above) - wrapping that one
+  // function here lets us react to "a round just ended, with this score" for
+  // every one of those games without touching any of the 12 game files.
+  (function wireChallengeAFriend(){
+    const originalReportScore = window.DailyChallengeSystem.reportScore;
+    window.DailyChallengeSystem.reportScore = function(gameId, score){
+      try{ originalReportScore(gameId, score); }catch(e){}
+      try{ handleRoundEndForChallenge(gameId, score); }catch(e){}
+    };
+    function handleRoundEndForChallenge(gameId, score){
+      if(typeof score !== 'number' || isNaN(score) || score <= 0) return;
+      const game = games.find(g=> g.id === gameId);
+      if(!game) return;
+      showChallengeToast(game, score);
+    }
+    function buildChallengeUrl(gameId, score){
+      const base = location.origin + location.pathname;
+      return base + '?challenge=' + encodeURIComponent(gameId) + '&score=' + encodeURIComponent(Math.round(score));
+    }
+    function showChallengeToast(game, score){
+      let toast = document.getElementById('challengeToast');
+      if(!toast){
+        toast = document.createElement('div');
+        toast.id = 'challengeToast';
+        toast.className = 'challengeToast';
+        document.body.appendChild(toast);
+      }
+      const roundedScore = Math.round(score);
+      toast.innerHTML = `
+        <div class="challengeToastText">🔥 השגתם ${roundedScore} ${game.unit||'נקודות'} ב-${game.title}!</div>
+        <button class="challengeToastBtn" id="challengeToastShareBtn">🎯 אתגרו חבר</button>
+        <button class="challengeToastClose" id="challengeToastCloseBtn">✕</button>
+      `;
+      toast.classList.add('show');
+      const shareBtn = document.getElementById('challengeToastShareBtn');
+      const closeBtn = document.getElementById('challengeToastCloseBtn');
+      const url = buildChallengeUrl(game.id, roundedScore);
+      const text = `אתגרתי אתכם ב-Arcade Zone! השגתי ${roundedScore} ${game.unit||'נקודות'} ב-${game.title} - מי שיעבור אותי הוא מלך/מלכה 👑\n${url}`;
+      if(shareBtn){
+        shareBtn.addEventListener('click', async ()=>{
+          try{
+            if(navigator.share){
+              await navigator.share({ title:'Arcade Zone - אתגר', text, url });
+            } else {
+              window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+            }
+          }catch(e){}
+        });
+      }
+      if(closeBtn) closeBtn.addEventListener('click', ()=> toast.classList.remove('show'));
+      clearTimeout(toast._hideTimer);
+      toast._hideTimer = setTimeout(()=> toast.classList.remove('show'), 9000);
+    }
+  })();
+
+  // Auto-detect a ?challenge=<gameId>&score=<n> URL (opened from a friend's
+  // shared link) and show a banner inviting the visitor to beat that score.
+  (function checkIncomingChallengeLink(){
+    try{
+      const params = new URLSearchParams(location.search);
+      const challengeGameId = params.get('challenge');
+      const challengeScoreRaw = params.get('score');
+      if(!challengeGameId || challengeScoreRaw === null) return;
+      const challengeScore = parseInt(challengeScoreRaw, 10);
+      const cleanUrl = location.origin + location.pathname;
+      history.replaceState(null, '', cleanUrl);
+      if(isNaN(challengeScore)) return;
+      document.addEventListener('DOMContentLoaded', ()=> showIncomingChallengeBanner(challengeGameId, challengeScore));
+      if(document.readyState !== 'loading') showIncomingChallengeBanner(challengeGameId, challengeScore);
+    }catch(e){}
+    let shown = false;
+    function showIncomingChallengeBanner(gameId, score){
+      if(shown) return;
+      const game = games.find(g=> g.id === gameId);
+      if(!game) return;
+      shown = true;
+      const banner = document.createElement('div');
+      banner.className = 'incomingChallengeBanner';
+      banner.innerHTML = `
+        <div class="incomingChallengeText">🎯 אותגרתם! חבר השיג <b>${score} ${game.unit||'נקודות'}</b> ב-${game.title} - תוכלו לעבור אותו?</div>
+        <button class="incomingChallengeBtn" id="incomingChallengeBtn">שחקו עכשיו</button>
+        <button class="incomingChallengeClose" id="incomingChallengeClose">✕</button>
+      `;
+      document.body.appendChild(banner);
+      requestAnimationFrame(()=> banner.classList.add('show'));
+      document.getElementById('incomingChallengeBtn').addEventListener('click', ()=>{
+        banner.classList.remove('show');
+        setTimeout(()=> banner.remove(), 300);
+        openGame(gameId);
+      });
+      document.getElementById('incomingChallengeClose').addEventListener('click', ()=>{
+        banner.classList.remove('show');
+        setTimeout(()=> banner.remove(), 300);
+      });
+    }
   })();
 
   // ==========================================================================
@@ -4070,6 +4236,77 @@
     importTextToggle:'qImportTextToggle', importTextBox:'qImportTextBox',
     importTextarea:'qImportTextarea', importTextBtn:'qImportTextBtn'
   });
+
+  // ---------- Public device-sync modal (QR + WhatsApp + file/text), no PIN required ----------
+  // Reuses the exact same buildBackupDump()/isArcadeKey() logic as the admin data
+  // tools above via wireDataTools(), just wired to a normal user-facing modal.
+  wireDataTools({
+    exportBtn:'syncExportBtn', importBtn:'syncImportBtn', importFile:'syncImportFile',
+    dataResult:'syncDataResult', whatsappBtn:'syncWhatsappBtn',
+    importTextToggle:'syncImportTextToggle', importTextBox:'syncImportTextBox',
+    importTextarea:'syncImportTextarea', importTextBtn:'syncImportTextBtn'
+  });
+  function b64EncodeUnicode(str){
+    return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (m,p)=> String.fromCharCode('0x'+p)));
+  }
+  function b64DecodeUnicode(str){
+    return decodeURIComponent(atob(str).split('').map(c=> '%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+  }
+  const SYNC_QR_URL_SAFE_LIMIT = 1400; // above this, QR codes get too dense to scan reliably
+  function renderSyncQr(){
+    const qrWrap = document.getElementById('syncQrWrap');
+    const qrImg = document.getElementById('syncQrImg');
+    const tooBig = document.getElementById('syncQrTooBig');
+    if(!qrWrap || !qrImg) return;
+    try{
+      const dump = buildBackupDump();
+      const encoded = b64EncodeUnicode(JSON.stringify(dump));
+      const base = location.origin + location.pathname;
+      const syncUrl = base + '?sync=' + encoded;
+      if(syncUrl.length > SYNC_QR_URL_SAFE_LIMIT){
+        qrWrap.style.display = 'none';
+        if(tooBig) tooBig.style.display = 'block';
+        return;
+      }
+      if(tooBig) tooBig.style.display = 'none';
+      qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=' + encodeURIComponent(syncUrl);
+      qrWrap.style.display = 'block';
+    }catch(e){
+      qrWrap.style.display = 'none';
+      if(tooBig) tooBig.style.display = 'block';
+    }
+  }
+  const syncOverlay = document.getElementById('syncOverlay');
+  const syncBtnEl = document.getElementById('syncBtn');
+  const syncCloseBtn = document.getElementById('syncCloseBtn');
+  if(syncBtnEl && syncOverlay){
+    syncBtnEl.addEventListener('click', ()=>{ renderSyncQr(); syncOverlay.classList.add('show'); });
+  }
+  if(syncCloseBtn && syncOverlay) syncCloseBtn.addEventListener('click', ()=> syncOverlay.classList.remove('show'));
+  if(syncOverlay) syncOverlay.addEventListener('click', (e)=>{ if(e.target===syncOverlay) syncOverlay.classList.remove('show'); });
+
+  // Auto-detect a ?sync=<data> URL param (from scanning the QR code above on
+  // another device) and offer to restore it here - same isArcadeKey() allowlist
+  // as every other import path, so it can't touch anything outside our own keys.
+  (function checkIncomingSyncLink(){
+    try{
+      const params = new URLSearchParams(location.search);
+      const syncParam = params.get('sync');
+      if(!syncParam) return;
+      const cleanUrl = location.origin + location.pathname;
+      const data = JSON.parse(b64DecodeUnicode(syncParam));
+      const keyCount = Object.keys(data).filter(isArcadeKey).length;
+      if(keyCount === 0){ history.replaceState(null, '', cleanUrl); return; }
+      const ok = confirm('זוהה קוד סנכרון ממכשיר אחר (' + keyCount + ' פריטי נתונים). לשחזר את ההתקדמות למכשיר הזה? הנתונים הנוכחיים כאן יוחלפו.');
+      if(ok){
+        Object.keys(data).forEach(k=>{ if(isArcadeKey(k)) localStorage.setItem(k, data[k]); });
+      }
+      history.replaceState(null, '', cleanUrl);
+      if(ok) location.reload();
+    }catch(e){
+      try{ history.replaceState(null, '', location.origin + location.pathname); }catch(e2){}
+    }
+  })();
 
   adminBtn.addEventListener('click', ()=>{
     if(adminUnlocked){ openAdminPanel(); } else { openPinModal(); }
