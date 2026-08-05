@@ -4245,11 +4245,21 @@
     importTextToggle:'syncImportTextToggle', importTextBox:'syncImportTextBox',
     importTextarea:'syncImportTextarea', importTextBtn:'syncImportTextBtn'
   });
+  // URL-safe base64 ("base64url"): standard base64's +, / and = characters are
+  // NOT safe to drop straight into a URL query value - "+" gets silently read
+  // back as a space by URLSearchParams.get(), and "+"/"/"/"=" can confuse link
+  // auto-detection in apps like WhatsApp, truncating the clickable link and
+  // leaving the rest as plain trailing text. Swapping to the base64url alphabet
+  // (- and _ instead of + and /, no padding) keeps the whole thing one clean,
+  // fully URL-safe token.
   function b64EncodeUnicode(str){
-    return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (m,p)=> String.fromCharCode('0x'+p)));
+    const b64 = btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (m,p)=> String.fromCharCode('0x'+p)));
+    return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   }
   function b64DecodeUnicode(str){
-    return decodeURIComponent(atob(str).split('').map(c=> '%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+    let b64 = str.replace(/-/g, '+').replace(/_/g, '/');
+    while(b64.length % 4) b64 += '=';
+    return decodeURIComponent(atob(b64).split('').map(c=> '%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join(''));
   }
   function buildSyncUrl(){
     const dump = buildBackupDump();
