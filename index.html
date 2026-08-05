@@ -4231,12 +4231,17 @@
     importTextarea:'qImportTextarea', importTextBtn:'qImportTextBtn'
   });
 
-  // ---------- Public device-sync modal (QR + WhatsApp + file/text), no PIN required ----------
+  // ---------- Public device-sync modal (QR + WhatsApp link + file/text), no PIN required ----------
   // Reuses the exact same buildBackupDump()/isArcadeKey() logic as the admin data
   // tools above via wireDataTools(), just wired to a normal user-facing modal.
+  // Note: whatsappBtn is deliberately NOT passed here - the shared wireDataTools()
+  // WhatsApp handler sends the raw JSON blob as text (meant for the admin-only
+  // paste-to-import flow), which is confusing for regular users. Instead we wire
+  // syncWhatsappBtn separately below to send a clean, clickable ?sync= link -
+  // the same one used for the QR code - so opening it just asks a plain yes/no.
   wireDataTools({
     exportBtn:'syncExportBtn', importBtn:'syncImportBtn', importFile:'syncImportFile',
-    dataResult:'syncDataResult', whatsappBtn:'syncWhatsappBtn',
+    dataResult:'syncDataResult',
     importTextToggle:'syncImportTextToggle', importTextBox:'syncImportTextBox',
     importTextarea:'syncImportTextarea', importTextBtn:'syncImportTextBtn'
   });
@@ -4246,6 +4251,12 @@
   function b64DecodeUnicode(str){
     return decodeURIComponent(atob(str).split('').map(c=> '%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join(''));
   }
+  function buildSyncUrl(){
+    const dump = buildBackupDump();
+    const encoded = b64EncodeUnicode(JSON.stringify(dump));
+    const base = location.origin + location.pathname;
+    return base + '?sync=' + encoded;
+  }
   const SYNC_QR_URL_SAFE_LIMIT = 1400; // above this, QR codes get too dense to scan reliably
   function renderSyncQr(){
     const qrWrap = document.getElementById('syncQrWrap');
@@ -4253,10 +4264,7 @@
     const tooBig = document.getElementById('syncQrTooBig');
     if(!qrWrap || !qrImg) return;
     try{
-      const dump = buildBackupDump();
-      const encoded = b64EncodeUnicode(JSON.stringify(dump));
-      const base = location.origin + location.pathname;
-      const syncUrl = base + '?sync=' + encoded;
+      const syncUrl = buildSyncUrl();
       if(syncUrl.length > SYNC_QR_URL_SAFE_LIMIT){
         qrWrap.style.display = 'none';
         if(tooBig) tooBig.style.display = 'block';
@@ -4273,8 +4281,18 @@
   const syncOverlay = document.getElementById('syncOverlay');
   const syncBtnEl = document.getElementById('syncBtn');
   const syncCloseBtn = document.getElementById('syncCloseBtn');
+  const syncWhatsappBtnEl = document.getElementById('syncWhatsappBtn');
   if(syncBtnEl && syncOverlay){
     syncBtnEl.addEventListener('click', ()=>{ renderSyncQr(); syncOverlay.classList.add('show'); });
+  }
+  if(syncWhatsappBtnEl){
+    syncWhatsappBtnEl.addEventListener('click', ()=>{
+      try{
+        const url = buildSyncUrl();
+        const text = 'רוצה להעביר אליך את ההתקדמות שלי מ-Arcade Zone? לחצו על הקישור ואשרו:\n' + url;
+        window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+      }catch(e){}
+    });
   }
   if(syncCloseBtn && syncOverlay) syncCloseBtn.addEventListener('click', ()=> syncOverlay.classList.remove('show'));
   if(syncOverlay) syncOverlay.addEventListener('click', (e)=>{ if(e.target===syncOverlay) syncOverlay.classList.remove('show'); });
@@ -4291,7 +4309,7 @@
       const data = JSON.parse(b64DecodeUnicode(syncParam));
       const keyCount = Object.keys(data).filter(isArcadeKey).length;
       if(keyCount === 0){ history.replaceState(null, '', cleanUrl); return; }
-      const ok = confirm('זוהה קוד סנכרון ממכשיר אחר (' + keyCount + ' פריטי נתונים). לשחזר את ההתקדמות למכשיר הזה? הנתונים הנוכחיים כאן יוחלפו.');
+      const ok = confirm('קיבלתם קישור סנכרון עם התקדמות של משתמש אחר. להחליף למשתמש הזה? (הנתונים הנוכחיים כאן יוחלפו)');
       if(ok){
         Object.keys(data).forEach(k=>{ if(isArcadeKey(k)) localStorage.setItem(k, data[k]); });
       }
