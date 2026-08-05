@@ -954,20 +954,12 @@
       </div>
 
       <div class="adminTabPane" data-pane="bonus">
-        <p class="hint">הענקת נקודות בונוס חד-פעמיות לשחקן. הבונוס יתווסף אוטומטית למשחק הבא שייפתח.</p>
-        <input class="adminInput" id="adminBonusInput" type="number" min="1" max="9999" placeholder="50" style="font-size:18px; letter-spacing:1px;">
+        <p class="hint">הענקת נקודות בונוס חד-פעמיות לשחקן (עד 200, פעם אחת בשבוע). הבונוס יתווסף אוטומטית למשחק הבא שייפתח.</p>
+        <input class="adminInput" id="adminBonusInput" type="number" min="1" max="200" placeholder="50" style="font-size:18px; letter-spacing:1px;">
         <div class="adminRow">
           <button class="adminBtnPrimary" id="adminBonusGrantBtn">🎁 הענק בונוס</button>
         </div>
         <div class="bonusResultMsg" id="adminBonusResult">הבונוס נשמר ויוענק במשחק הבא!</div>
-
-        <hr style="border:none; border-top:1px solid rgba(255,255,255,0.14); margin:18px 0;">
-        <p class="hint">קביעת רצף ימים ידנית (למשל 30, כדי לפתוח מיד את כל הפרסים). הרצף ימשיך להיספר כרגיל מהיום הזה והלאה.</p>
-        <input class="adminInput" id="adminStreakInput" type="number" min="1" max="999" placeholder="30" style="font-size:18px; letter-spacing:1px;">
-        <div class="adminRow">
-          <button class="adminBtnPrimary" id="adminStreakSetBtn">🔥 עדכן רצף</button>
-        </div>
-        <div class="bonusResultMsg" id="adminStreakResult">הרצף עודכן! העמוד ייטען מחדש...</div>
       </div>
 
       <div class="adminTabPane" data-pane="stats">
@@ -3971,16 +3963,39 @@
   });
 
   // ---- Bonus points grant (wired for both the 1234 panel's admin* ids and
-  // the 4321 panel's q* ids, so both admin surfaces share one implementation) ----
+  // the 4321 panel's q* ids, so both admin surfaces share one implementation).
+  // The 1234 panel (the one revealed to players via the day-20 streak easter egg)
+  // is intentionally more limited: capped amount + once-per-week cooldown, so a
+  // player who finds the code can't hand out unlimited coins to themselves.
+  // The 4321 panel (owner-only, separate code) stays uncapped/unlimited as before.
   const ADMIN_BONUS_KEY = 'arcade_admin_bonus';
-  function wireBonusGrant(inputId, btnId, resultId){
+  const ADMIN_BONUS_1234_LAST_GRANT_KEY = 'arcade_admin_bonus_1234_last_grant';
+  const ADMIN_BONUS_1234_MAX = 200;
+  const ADMIN_BONUS_1234_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000; // once a week
+  function wireBonusGrant(inputId, btnId, resultId, opts){
     const input = document.getElementById(inputId);
     const btn = document.getElementById(btnId);
     const result = document.getElementById(resultId);
     if(!btn) return;
+    const weeklyLimit = !!(opts && opts.weeklyLimit);
+    const maxAmount = opts && opts.maxAmount;
     btn.addEventListener('click', ()=>{
-      const amount = parseInt(input.value, 10);
+      let amount = parseInt(input.value, 10);
       if(!amount || amount<=0) return;
+      if(maxAmount && amount > maxAmount) amount = maxAmount;
+      if(weeklyLimit){
+        let lastGrant = 0;
+        try{ lastGrant = parseInt(localStorage.getItem(ADMIN_BONUS_1234_LAST_GRANT_KEY)||'0', 10) || 0; }catch(e){}
+        const elapsed = Date.now() - lastGrant;
+        if(lastGrant && elapsed < ADMIN_BONUS_1234_COOLDOWN_MS){
+          const daysLeft = Math.ceil((ADMIN_BONUS_1234_COOLDOWN_MS - elapsed) / (24*60*60*1000));
+          result.textContent = `⏳ כבר קיבלתם בונוס השבוע. אפשר שוב בעוד ${daysLeft} ${daysLeft===1 ? 'יום' : 'ימים'}.`;
+          result.classList.add('show');
+          setTimeout(()=> result.classList.remove('show'), 4000);
+          return;
+        }
+        try{ localStorage.setItem(ADMIN_BONUS_1234_LAST_GRANT_KEY, String(Date.now())); }catch(e){}
+      }
       try{
         localStorage.setItem(ADMIN_BONUS_KEY, JSON.stringify({amount, id: Date.now()}));
       }catch(e){}
@@ -3991,10 +4006,12 @@
       setTimeout(()=> result.classList.remove('show'), 4000);
     });
   }
-  wireBonusGrant('adminBonusInput', 'adminBonusGrantBtn', 'adminBonusResult');
+  wireBonusGrant('adminBonusInput', 'adminBonusGrantBtn', 'adminBonusResult', { weeklyLimit:true, maxAmount: ADMIN_BONUS_1234_MAX });
   wireBonusGrant('qBonusInput', 'qBonusGrantBtn', 'qBonusResult');
 
-  // ---- Manual streak set (same dual-wiring pattern) ----
+  // ---- Manual streak set (owner-only 4321 panel; the 1234 panel deliberately
+  // does not expose streak-setting, so players who find that code can't skip
+  // ahead in the streak rewards themselves) ----
   function wireStreakSet(inputId, btnId, resultId){
     const input = document.getElementById(inputId);
     const btn = document.getElementById(btnId);
@@ -4013,7 +4030,6 @@
       setTimeout(()=>{ location.reload(); }, 900);
     });
   }
-  wireStreakSet('adminStreakInput', 'adminStreakSetBtn', 'adminStreakResult');
   wireStreakSet('qStreakInput', 'qStreakSetBtn', 'qStreakResult');
 
   // Live-sync the announcement across other open tabs/windows of this same file
