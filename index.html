@@ -3622,6 +3622,13 @@
   function openGame(id){
     const html = window.GAMES && window.GAMES[id];
     if(!html) return;
+    // If this exact game is already the one open and active, don't reload it -
+    // reloading blows away all in-game progress (score/percent back to 0).
+    // Without this guard, anything that re-fires the same navigation (e.g. a
+    // browser back/forward "popstate" event with the hash unchanged, which can
+    // happen from a trackpad swipe-back gesture, or a duplicate click) would
+    // silently reset an in-progress run to 0% for no visible reason.
+    if(currentGameId === id && gameView.classList.contains('active')) return;
     currentGameId = id;
     const g = games.find(x=>x.id===id);
     scoreBeforeOpen = g ? getGameScore(g) : null;
