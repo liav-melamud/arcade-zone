@@ -3178,7 +3178,7 @@
   let chaosCrateState = null;
   let chaosCrateAnimTimer = null;
   function chaosTapsLeft(s){ return s.stars.reduce((n,st)=> n + st.tapsLeft, 0); }
-  // Every star has its own 4 taps: a star that splits gives the new star a fresh 4.
+  // Every star has its own 4 taps: a split gives the new star a fresh 4, and an upgrade refills the tapped star to 4.
   function renderChaosCrateState(eventText, anim){
     const s = chaosCrateState;
     if(!s) return;
@@ -3251,7 +3251,8 @@
     let text, anim = { i: idx, kind: 'pop' };
     if(r < upChance){
       s.tierIdx++; anim = { kind: 'upgrade' };
-      text = LANG==='en' ? '⬆️ Upgraded!' : '⬆️ שודרג!';
+      star.tapsLeft = CHAOS_CRATE_TAPS;
+      text = LANG==='en' ? '⬆️ Upgraded! 4 fresh taps!' : '⬆️ שודרג! עוד 4 הקשות!';
     } else if(s.stars.length < CHAOS_CRATE_MAX_DROPS && r < upChance + CHAOS_CRATE_SPLIT_CHANCE){
       s.stars.push({ tapsLeft: CHAOS_CRATE_TAPS });
       anim = { i: s.stars.length - 1, kind: 'split' };
