@@ -1297,7 +1297,6 @@
     achievementsBtn: {he:'🏆 ההישגים שלי', en:'🏆 My Achievements'},
     progressBtn: {he:'📈 ההתקדמות שלי', en:'📈 My Progress'},
     demoBtn: {he:'🎬 הדגמה', en:'🎬 Demo'},
-    dailyChestBtn: {he:'🎁 תיבה יומית', en:'🎁 Daily Chest'},
     crtToggleBtn: {he:'📺 מסך רטרו', en:'📺 Retro Screen'},
     syncBtn: {he:'☁️ סנכרון מכשירים', en:'☁️ Device Sync'},
     shopBtn: {he:'🛒 חנות', en:'🛒 Shop'},
@@ -3125,7 +3124,8 @@
       const cooldownMs = getChestCooldownHours()*3600*1000;
       const elapsed = Date.now() - last;
       if(elapsed >= cooldownMs) return { ready:true, remainingMs:0 };
-      return { ready:false, remainingMs: cooldownMs-elapsed };
+      // Clamp so a device clock set backwards can't lock the chest for longer than one cooldown.
+      return { ready:false, remainingMs: Math.min(cooldownMs, cooldownMs-elapsed) };
     }catch(e){ return { ready:true, remainingMs:0 }; }
   }
   // ---- Chaos Crate: 6-tier rarity ladder for the daily chest (Brawl Stars-style colors), auto-reveal spin ----
@@ -3354,15 +3354,18 @@
     } else {
       const hrs = Math.floor(state.remainingMs/3600000);
       const mins = Math.floor((state.remainingMs%3600000)/60000);
+      const secs = Math.floor((state.remainingMs%60000)/1000);
+      const leftEn = (hrs ? hrs+'h ' : '') + (hrs || mins ? mins+'m ' : '') + secs+'s';
+      const leftHe = (hrs ? hrs+'ש׳ ' : '') + (hrs || mins ? mins+'ד׳ ' : '') + secs+'שנ׳';
       const tickets = getChestTickets();
       if(tickets > 0){
         // Holding an instant-open ticket makes the button usable during the
         // cooldown; tapping it spends one ticket and opens the chest right away.
-        btn.textContent = LANG==='en' ? `🎟️ Open now with ticket (${tickets}) - ${hrs}h ${mins}m left` : `🎟️ פתחו עכשיו בכרטיס (${tickets}) - עוד ${hrs}ש ${mins}ד`;
+        btn.textContent = LANG==='en' ? `🎟️ Open now with ticket (${tickets}) - ${leftEn} left` : `🎟️ פתחו עכשיו בכרטיס (${tickets}) - עוד ${leftHe}`;
         btn.disabled = false;
         btn.classList.add('chestReady');
       } else {
-        btn.textContent = LANG==='en' ? `🎁 Daily chest - ${hrs}h ${mins}m left` : `🎁 תיבה יומית - עוד ${hrs}ש ${mins}ד`;
+        btn.textContent = LANG==='en' ? `🎁 Daily chest - ${leftEn} left` : `🎁 תיבה יומית - עוד ${leftHe}`;
         btn.disabled = true;
         btn.classList.remove('chestReady');
       }
@@ -4295,6 +4298,10 @@
   renderPrizes();
   renderChallenge();
   renderDailyChest();
+  // Live countdown: re-render every second (the label used to be painted once and never updated),
+  // and again right away when the tab comes back to the foreground.
+  setInterval(renderDailyChest, 1000);
+  document.addEventListener('visibilitychange', renderDailyChest);
   drainPendingGameCoins();
   if(window.DailyChallengeSystem) window.DailyChallengeSystem.renderUI();
   // Daily Challenge System: "autopilot for 5 cumulative minutes" is tracked
